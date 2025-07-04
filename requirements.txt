@@ -1,0 +1,11 @@
+yt-dlp>=2023.12.30
+openai-whisper>=20231117
+openai>=1.6.1
+elevenlabs>=0.2.27
+requests>=2.31.0
+python-dotenv>=1.0.0
+moviepy>=1.0.3
+pydub>=0.25.1
+numpy>=1.24.3
+torch>=2.1.2
+torchaudio>=2.1.2 
