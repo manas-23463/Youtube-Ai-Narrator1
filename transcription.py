@@ -58,6 +58,11 @@ class TranscriptionSegmenter:
         """
         self.load_model()
         
+        if not os.path.exists(audio_path):
+            logger.error(f"[CHECK] Audio file does NOT exist before transcription: {audio_path}")
+            raise FileNotFoundError(f"Audio file not found: {audio_path}")
+        else:
+            logger.info(f"[CHECK] Audio file exists before transcription: {audio_path}")
         logger.info(f"Transcribing audio: {audio_path}")
         result = self.model.transcribe(
             audio_path,

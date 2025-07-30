@@ -123,9 +123,27 @@ class YouTubeDownloader:
             with yt_dlp.YoutubeDL(audio_opts) as ydl:
                 ydl.download([url])
                 # The audio template already includes _audio, so we construct the correct path
+                import re
                 clean_title = info['title'].replace('/', '_').replace('\\', '_')
+                # Remove non-ASCII characters
+                clean_title = re.sub(r'[^\x00-\x7F]+', '_', clean_title)
                 audio_filename = os.path.join(self.output_dir, f"{clean_title}_audio.wav")
                 self.audio_path = audio_filename
+                # Log file existence
+                if os.path.exists(self.audio_path):
+                    logger.info(f"[CHECK] Audio file exists: {self.audio_path}")
+                else:
+                    logger.error(f"[CHECK] Audio file MISSING: {self.audio_path}")
+                    # Fallback: search for any _audio.wav file in output dir
+                    for fname in os.listdir(self.output_dir):
+                        if fname.endswith('_audio.wav'):
+                            fallback_path = os.path.join(self.output_dir, fname)
+                            logger.warning(f"[FALLBACK] Using found audio file: {fallback_path}")
+                            self.audio_path = fallback_path
+                            break
+                # Log all files in output directory
+                logger.info(f"[DEBUG] All files in output dir: {os.listdir(self.output_dir)}")
+                logger.info(f"[DEBUG] Expected audio filename: {self.audio_path}")
             
             logger.info(f"Video downloaded: {self.video_path}")
             logger.info(f"Audio extracted: {self.audio_path}")

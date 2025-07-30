@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Narrated Video Player</title>
+  <style>
+    body { background: #111; color: #fff; font-family: sans-serif; margin: 0; }
+    .video-container { position: relative; width: 80vw; margin: 40px auto; }
+    video { width: 100%; border-radius: 8px; }
+    .narration-overlay {
+      position: absolute;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      color: #fff;
+      font-size: 1.3em;
+      border-radius: 8px;
+    }
+    .narration-buttons {
+      margin-top: 24px;
+      display: flex;
+      gap: 24px;
+    }
+    .narration-btn {
+      padding: 12px 28px;
+      font-size: 1em;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #222;
+      color: #fff;
+      transition: background 0.2s;
+    }
+    .narration-btn.start { background: #2ecc40; }
+    .narration-btn.skip { background: #888; }
+    .narration-btn:hover { filter: brightness(1.2); }
+  </style>
+</head>
+<body>
+  <div class="video-container">
+    <video id="video" controls>
+      <source src="outputs/How a Microwave Oven Works_AI_Narrated_20250704_134617.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+    <div id="narrationOverlay" class="narration-overlay" style="display:none;">
+      <div>Would you like to hear an explanation of this concept?</div>
+      <div class="narration-buttons">
+        <button class="narration-btn start" id="startBtn">✅ Start Narration</button>
+        <button class="narration-btn skip" id="skipBtn">⏭️ Skip Narration</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    // Dummy narration segments (replace with real timestamps in seconds)
+    const narrationSegments = [
+      { start: 10, end: 20 },
+      { start: 45, end: 55 },
+      { start: 80, end: 90 }
+    ];
+
+    const video = document.getElementById('video');
+    const overlay = document.getElementById('narrationOverlay');
+    const startBtn = document.getElementById('startBtn');
+    const skipBtn = document.getElementById('skipBtn');
+    let currentSegmentIndex = 0;
+    let overlayActive = false;
+
+    // Helper: Show overlay
+    function showOverlay() {
+      overlay.style.display = 'flex';
+      overlayActive = true;
+      video.pause();
+    }
+
+    // Helper: Hide overlay
+    function hideOverlay() {
+      overlay.style.display = 'none';
+      overlayActive = false;
+    }
+
+    // Listen for time updates
+    video.addEventListener('timeupdate', () => {
+      if (currentSegmentIndex >= narrationSegments.length) return;
+      const seg = narrationSegments[currentSegmentIndex];
+      // Only trigger if overlay is not active and we're at the start of a narration
+      if (!overlayActive && video.currentTime >= seg.start && video.currentTime < seg.start + 0.5) {
+        showOverlay();
+      }
+    });
+
+    // Start Narration: Resume video, don't show overlay again for this segment
+    startBtn.addEventListener('click', () => {
+      hideOverlay();
+      video.play();
+      currentSegmentIndex++;
+    });
+
+    // Skip Narration: Jump to end of narration, don't show overlay again for this segment
+    skipBtn.addEventListener('click', () => {
+      hideOverlay();
+      video.currentTime = narrationSegments[currentSegmentIndex].end;
+      currentSegmentIndex++;
+      video.play();
+    });
+
+    // If user seeks backward, reset segment index appropriately
+    video.addEventListener('seeked', () => {
+      // Find the first segment whose start is after current time
+      for (let i = 0; i < narrationSegments.length; i++) {
+        if (video.currentTime < narrationSegments[i].start) {
+          currentSegmentIndex = i;
+          hideOverlay();
+          return;
+        }
+      }
+      // If after all segments
+      currentSegmentIndex = narrationSegments.length;
+      hideOverlay();
+    });
+  </script>
+</body>
+</html> 

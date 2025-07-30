@@ -10,7 +10,62 @@ Transform educational YouTube videos by adding AI-powered explanations between c
 - **🤖 AI Explanations**: Generates clear, simple explanations using GPT-4
 - **🗣️ Natural Speech**: Synthesizes explanations using ElevenLabs TTS
 - **🎞️ Video Processing**: Seamlessly integrates narrations into the original video
+- **☁️ Cloud API**: Deployed on Modal for easy access
 - **🔧 Modular Design**: Clean, well-documented, and extensible codebase
+
+## 🚀 Quick Start
+
+### Option 1: Use the Cloud API (Recommended)
+
+The YouTube AI Narrator is deployed on Modal and ready to use!
+
+**API Base URL:** `https://manas--youtube-ai-narrator-api-process-video-api.modal.run`
+
+#### Available Endpoints:
+
+1. **Health Check**
+   ```bash
+   curl https://manas--youtube-ai-narrator-api-health-check.modal.run
+   ```
+
+2. **Get Available Voices**
+   ```bash
+   curl https://manas--youtube-ai-narrator-api-get-voices.modal.run
+   ```
+
+3. **Process Video**
+   ```bash
+   curl -X POST https://manas--youtube-ai-narrator-api-process-video-api.modal.run \
+     -H "Content-Type: application/json" \
+     -d '{
+       "youtube_url": "https://www.youtube.com/watch?v=YOUR_VIDEO_ID",
+       "voice_id": "21m00Tcm4TlvDq8ikWAM"
+     }'
+   ```
+
+#### Download the Processed Video:
+```bash
+# Download and save the video locally
+curl -X POST https://manas--youtube-ai-narrator-api-process-video-api.modal.run \
+  -H "Content-Type: application/json" \
+  -d '{
+    "youtube_url": "https://www.youtube.com/watch?v=YOUR_VIDEO_ID",
+    "voice_id": "21m00Tcm4TlvDq8ikWAM"
+  }' | python3 -c "
+import json, sys, base64
+response = json.load(sys.stdin)
+if response['success']:
+    video_data = response['download_url'].split(',')[1]
+    filename = response['output_filename']
+    with open(filename, 'wb') as f:
+        f.write(base64.b64decode(video_data))
+    print(f'✅ Video saved to: {filename}')
+else:
+    print(f'❌ Error: {response[\"error\"]}')
+"
+```
+
+### Option 2: Local Installation
 
 ## 🛠️ Prerequisites
 
@@ -64,7 +119,7 @@ You'll need API keys for:
 
 ## 🚀 Usage
 
-### Basic Usage
+### Local Usage
 
 ```bash
 python main.py "YOUTUBE_URL" "ELEVENLABS_VOICE_ID"
@@ -97,6 +152,78 @@ python main.py "https://www.youtube.com/watch?v=example" "voice_id_here" --verbo
 - `--output-filename` - Custom output filename (optional)
 - `--verbose` - Enable verbose logging
 
+## 🌐 API Reference
+
+### Base URL
+```
+https://manas--youtube-ai-narrator-api-process-video-api.modal.run
+```
+
+### Endpoints
+
+#### 1. Health Check
+- **URL:** `https://manas--youtube-ai-narrator-api-health-check.modal.run`
+- **Method:** `GET`
+- **Response:**
+  ```json
+  {
+    "status": "ok"
+  }
+  ```
+
+#### 2. Get Available Voices
+- **URL:** `https://manas--youtube-ai-narrator-api-get-voices.modal.run`
+- **Method:** `GET`
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "voices": [
+      {
+        "name": "Rachel",
+        "voice_id": "21m00Tcm4TlvDq8ikWAM",
+        "category": "premade",
+        "description": "Professional female voice"
+      }
+    ],
+    "count": 52
+  }
+  ```
+
+#### 3. Process Video
+- **URL:** `https://manas--youtube-ai-narrator-api-process-video-api.modal.run`
+- **Method:** `POST`
+- **Headers:** `Content-Type: application/json`
+- **Request Body:**
+  ```json
+  {
+    "youtube_url": "https://www.youtube.com/watch?v=YOUR_VIDEO_ID",
+    "voice_id": "21m00Tcm4TlvDq8ikWAM",
+    "whisper_model": "base",
+    "output_filename": "my_video.mp4"
+  }
+  ```
+- **Response:**
+  ```json
+  {
+    "success": true,
+    "video_title": "Original Video Title",
+    "segments_count": 5,
+    "narrations_count": 5,
+    "output_filename": "my_video.mp4",
+    "download_url": "data:video/mp4;base64,<base64_encoded_video_data>"
+  }
+  ```
+
+### API Parameters
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `youtube_url` | string | ✅ | - | YouTube video URL |
+| `voice_id` | string | ❌ | `21m00Tcm4TlvDq8ikWAM` | ElevenLabs voice ID |
+| `whisper_model` | string | ❌ | `base` | Whisper model: `tiny`, `base`, `small`, `medium`, `large` |
+| `output_filename` | string | ❌ | auto-generated | Custom output filename |
+
 ## 🎯 How It Works
 
 1. **📥 Download**: Downloads the YouTube video and extracts audio
@@ -115,14 +242,47 @@ python main.py "https://www.youtube.com/watch?v=example" "voice_id_here" --verbo
 ```
 youtube-ai-narrator/
 ├── main.py                 # Main orchestration script
+├── modal_api.py           # Modal cloud API deployment
+├── deploy_modal.py        # Modal deployment script
+├── test_api.py           # API testing client
 ├── youtube_downloader.py   # YouTube video downloading
 ├── transcription.py        # Whisper transcription & segmentation
 ├── narrator.py            # GPT-4 explanations & ElevenLabs TTS
 ├── video_processor.py     # FFmpeg video processing
+├── get_voices.py          # Voice management utilities
 ├── requirements.txt       # Python dependencies
-├── README.md             # This file
-└── .env                  # Environment variables (create this)
+├── outputs/              # Generated videos (local)
+├── MODAL_DEPLOYMENT.md   # Modal deployment guide
+├── COOKIES_GUIDE.md      # YouTube cookies setup
+└── README.md             # This file
 ```
+
+## ☁️ Cloud Deployment
+
+### Current Deployment Status
+- **✅ Deployed**: Yes
+- **Platform**: Modal
+- **Status**: Active
+- **URL**: `https://manas--youtube-ai-narrator-api-process-video-api.modal.run`
+
+### Deploy Your Own Instance
+
+1. **Install Modal CLI**:
+   ```bash
+   pip install modal
+   ```
+
+2. **Authenticate with Modal**:
+   ```bash
+   modal token new
+   ```
+
+3. **Deploy**:
+   ```bash
+   python deploy_modal.py
+   ```
+
+For detailed deployment instructions, see [MODAL_DEPLOYMENT.md](MODAL_DEPLOYMENT.md).
 
 ## ⚙️ Configuration
 
@@ -172,6 +332,12 @@ Modify narration parameters in `narrator.py`:
    - Process shorter videos first
    - Consider using GPU acceleration if available
 
+5. **API timeout errors**:
+   ```
+   Error: Request timeout
+   ```
+   **Solution**: The cloud API has a 1-hour timeout. For very long videos, consider processing locally.
+
 ### Debug Mode
 
 Enable verbose logging to see detailed processing information:
@@ -204,6 +370,19 @@ Modify `video_processor.py` to:
 - **Batch processing**: Process multiple videos by modifying the main script
 - **Optimize for speed**: Use `--model tiny` for quick tests
 - **Optimize for quality**: Use `--model large` for final outputs
+- **Cloud processing**: Use the Modal API for heavy processing without local resources
+
+## 🗂️ Output Storage
+
+### Local Processing
+- **Location**: `./outputs/` directory (default)
+- **Format**: MP4 files with AI narrations
+- **Naming**: `{Video_Title}_AI_Narrated_{Timestamp}.mp4`
+
+### Cloud API
+- **Storage**: No permanent storage (on-demand processing)
+- **Delivery**: Base64-encoded data URL in API response
+- **Download**: Must be saved locally by the client
 
 ## 🤝 Contributing
 
@@ -223,13 +402,23 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 - **ElevenLabs** for high-quality text-to-speech
 - **yt-dlp** for reliable YouTube downloading
 - **FFmpeg** for video processing capabilities
+- **Modal** for cloud infrastructure
 
 ## 📞 Support
 
 If you encounter issues:
 1. Check the troubleshooting section above
 2. Review the logs in `youtube_ai_narrator.log`
-3. Open an issue with detailed error information
+3. Test the cloud API endpoints
+4. Open an issue with detailed error information
+
+## 📈 Recent Updates
+
+- ✅ **Cloud API**: Deployed on Modal for easy access
+- ✅ **Voice Management**: Added voice listing and selection
+- ✅ **Error Handling**: Improved error messages and debugging
+- ✅ **Video Processing**: Optimized FFmpeg-based processing
+- ✅ **Documentation**: Comprehensive API documentation
 
 ---
 

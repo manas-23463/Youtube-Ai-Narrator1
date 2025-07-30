@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Debug Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; }
+        .result { margin-top: 10px; padding: 10px; background: #f5f5f5; border-radius: 3px; white-space: pre-wrap; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+    </style>
+</head>
+<body>
+    <h1>API Debug Test</h1>
+    
+    <div class="test-section">
+        <h3>Test API Connection</h3>
+        <button onclick="testAPI()">Test API Call</button>
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8002';
+        
+        async function testAPI() {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = 'Testing...';
+            resultDiv.className = 'result';
+            
+            try {
+                console.log('Testing API connection...');
+                
+                const response = await fetch(`${API_BASE}/process-video`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        youtube_url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+                        auto_trigger: true,
+                        trigger_interval: 30,
+                        show_avatar: false,
+                        bgm_enabled: false
+                    })
+                });
+                
+                console.log('Response status:', response.status);
+                console.log('Response ok:', response.ok);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                resultDiv.textContent = `SUCCESS!\nStatus: ${response.status}\nData: ${JSON.stringify(data, null, 2)}`;
+                resultDiv.className = 'result success';
+                
+            } catch (error) {
+                console.error('API test failed:', error);
+                resultDiv.textContent = `ERROR!\n${error.message}\n\nFull error: ${error}`;
+                resultDiv.className = 'result error';
+            }
+        }
+        
+        // Auto-test on page load
+        window.onload = function() {
+            setTimeout(testAPI, 1000);
+        };
+    </script>
+</body>
+</html> 
