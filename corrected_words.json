@@ -1,0 +1,130 @@
+{
+  "words": [
+    {
+      "text": "Welcome",
+      "start": 0.0,
+      "end": 0.5,
+      "confidence": 0.98
+    },
+    {
+      "text": "to",
+      "start": 0.5,
+      "end": 0.7,
+      "confidence": 0.99
+    },
+    {
+      "text": "our",
+      "start": 0.7,
+      "end": 1.0,
+      "confidence": 0.97
+    },
+    {
+      "text": "presentation",
+      "start": 1.0,
+      "end": 2.0,
+      "confidence": 0.95
+    },
+    {
+      "text": "about",
+      "start": 2.0,
+      "end": 2.3,
+      "confidence": 0.96
+    },
+    {
+      "text": "E",
+      "start": 2.3,
+      "end": 2.5,
+      "confidence": 0.85
+    },
+    {
+      "text": "say",
+      "start": 2.5,
+      "end": 2.8,
+      "confidence": 0.8
+    },
+    {
+      "text": "technologies",
+      "start": 2.8,
+      "end": 3.5,
+      "confidence": 0.9
+    },
+    {
+      "text": "Today",
+      "start": 3.5,
+      "end": 3.8,
+      "confidence": 0.94
+    },
+    {
+      "text": "we'll",
+      "start": 3.8,
+      "end": 4.0,
+      "confidence": 0.93
+    },
+    {
+      "text": "be",
+      "start": 4.0,
+      "end": 4.2,
+      "confidence": 0.95
+    },
+    {
+      "text": "discussing",
+      "start": 4.2,
+      "end": 4.8,
+      "confidence": 0.91
+    },
+    {
+      "text": "the",
+      "start": 4.8,
+      "end": 5.0,
+      "confidence": 0.99
+    },
+    {
+      "text": "new",
+      "start": 5.0,
+      "end": 5.3,
+      "confidence": 0.96
+    },
+    {
+      "text": "iPhone",
+      "start": 5.3,
+      "end": 5.8,
+      "confidence": 0.92
+    },
+    {
+      "text": "15",
+      "start": 5.8,
+      "end": 6.0,
+      "confidence": 0.98
+    },
+    {
+      "text": "pro",
+      "start": 6.0,
+      "end": 6.3,
+      "confidence": 0.87
+    },
+    {
+      "text": "max",
+      "start": 6.3,
+      "end": 6.6,
+      "confidence": 0.85
+    },
+    {
+      "text": "and",
+      "start": 6.6,
+      "end": 6.8,
+      "confidence": 0.97
+    },
+    {
+      "text": "its",
+      "start": 6.8,
+      "end": 7.0,
+      "confidence": 0.96
+    },
+    {
+      "text": "features",
+      "start": 7.0,
+      "end": 7.2,
+      "confidence": 0.93
+    }
+  ]
+}
