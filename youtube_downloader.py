@@ -352,6 +352,86 @@ class YouTubeDownloader:
             return self.video_info.get('title', 'Unknown Title')
         return None
     
+    def extract_video_chapters(self, url: str):
+        """
+        Extract chapter information from a YouTube video without downloading
+        
+        Args:
+            url: YouTube video URL
+            
+        Returns:
+            List of chapter dictionaries with 'start_time', 'end_time', and 'title'
+        """
+        try:
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'extract_flat': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                },
+                'retries': 3,
+                'fragment_retries': 3,
+                'age_limit': 0,
+                'geo_bypass': True,
+                'geo_bypass_country': 'US',
+            }
+            
+            # Add cookies file if provided
+            if self.cookies_file and os.path.exists(self.cookies_file):
+                ydl_opts['cookiefile'] = self.cookies_file
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                
+                chapters = info.get('chapters', [])
+                if chapters:
+                    logger.info(f"Found {len(chapters)} chapters in video")
+                    return chapters
+                else:
+                    logger.info("No chapters found in video")
+                    return []
+                    
+        except Exception as e:
+            logger.error(f"Error extracting chapters: {str(e)}")
+            return []
+
+    def get_video_info_without_download(self, url: str):
+        """
+        Get video information without downloading the actual video
+        
+        Args:
+            url: YouTube video URL
+            
+        Returns:
+            Video info dictionary or None if failed
+        """
+        try:
+            ydl_opts = {
+                'quiet': True,
+                'no_warnings': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+                },
+                'retries': 3,
+                'fragment_retries': 3,
+                'age_limit': 0,
+                'geo_bypass': True,
+                'geo_bypass_country': 'US',
+            }
+            
+            # Add cookies file if provided
+            if self.cookies_file and os.path.exists(self.cookies_file):
+                ydl_opts['cookiefile'] = self.cookies_file
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                return info
+                    
+        except Exception as e:
+            logger.error(f"Error getting video info: {str(e)}")
+            return None
+    
     def cleanup(self):
         """Clean up downloaded files"""
         try:

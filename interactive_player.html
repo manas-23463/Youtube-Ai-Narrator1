@@ -562,6 +562,193 @@
             border-radius: 0 0 30px 30px;
             transform: scaleY(1.2);
         }
+
+        /* Chat Interface Styles */
+        .chat-section {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            max-height: 350px;
+            overflow: hidden;
+        }
+
+        .chat-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            height: 250px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 12px;
+            padding: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            max-height: 150px;
+        }
+
+        .chat-message {
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-message.user-message {
+            align-items: flex-end;
+        }
+
+        .chat-message.bot-message {
+            align-items: flex-start;
+        }
+
+        .message-content {
+            max-width: 85%;
+            padding: 8px 12px;
+            border-radius: 15px;
+            font-size: 0.85rem;
+            line-height: 1.3;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+        }
+
+        .user-message .message-content {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+        }
+
+        .bot-message .message-content {
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+        }
+
+        .chat-input-container {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #chat-input {
+            flex: 1;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-size: 0.85rem;
+            outline: none;
+            max-width: 200px;
+        }
+
+        #chat-input:focus {
+            background: white;
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.3);
+        }
+
+        #chat-send-btn {
+            padding: 10px 16px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        #chat-send-btn:hover {
+            background: white;
+            transform: translateY(-1px);
+        }
+
+        #chat-send-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        #chat-toggle-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2) !important;
+            color: white !important;
+            font-size: 0.9rem;
+            padding: 10px 16px;
+            white-space: nowrap;
+        }
+
+        #chat-toggle-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+        }
+
+        /* Ensure popup actions stay within bounds */
+        .popup-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border-radius: 15px;
+            padding: 18px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            margin-top: 20px;
+            flex-wrap: wrap;
+            max-width: 100%;
+        }
+
+        .action-btn {
+            padding: 10px 18px;
+            border: none;
+            border-radius: 12px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            min-width: fit-content;
+        }
+
+        /* Ensure popup content doesn't overflow */
+        .popup-content {
+            margin-bottom: 20px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+
+        /* Responsive adjustments for smaller screens */
+        @media (max-width: 768px) {
+            .chat-section {
+                max-height: 300px;
+                padding: 15px;
+            }
+            
+            .chat-container {
+                height: 200px;
+            }
+            
+            .chat-messages {
+                max-height: 120px;
+            }
+            
+            .popup-actions {
+                gap: 8px;
+                padding: 15px;
+            }
+            
+            .action-btn {
+                padding: 8px 14px;
+                font-size: 0.85rem;
+            }
+        }
     </style>
 </head>
 <body>
@@ -587,7 +774,7 @@
                 </div>
             </div>
             <div class="setting-group">
-                <span class="setting-label">Interval (seconds)</span>
+                <span class="setting-label" for="trigger-interval">Interval (seconds)</span>
                 <div class="setting-control">
                     <input type="number" class="interval-input" id="trigger-interval" value="30" min="10" max="120" />
                 </div>
@@ -651,10 +838,30 @@
                     Loading AI-generated summary...
                 </div>
             </div>
+            
+            <div class="chat-section" id="chat-section" style="display: none;">
+                <div class="chat-title">💬 Ask Questions About This Video</div>
+                <div class="chat-container">
+                    <div class="chat-messages" id="chat-messages">
+                        <div class="chat-message bot-message">
+                            <div class="message-content">
+                                Hi! I'm here to help you understand this video better. Ask me any questions about what was discussed!
+                            </div>
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <input type="text" id="chat-input" placeholder="Type your question here..." maxlength="500" />
+                        <button id="chat-send-btn" onclick="sendChatMessage()">Send</button>
+                    </div>
+                </div>
+            </div>
         </div>
         
         <div class="popup-actions">
             <button id="ai-narration-btn" class="action-btn secondary-btn" style="display:none;">▶️ Start AI Narration</button>
+            <button id="chat-toggle-btn" class="action-btn secondary-btn" onclick="toggleChat()">
+                💬 Ask Questions
+            </button>
             <button class="action-btn secondary-btn" onclick="closePopup()">
                 ✋ Continue Watching
             </button>
@@ -674,6 +881,13 @@
         let lastTriggerTime = 0;
         let isProcessing = false;
         let apiBaseUrl = 'http://localhost:8002';
+        
+        // New variables for chapter-based system
+        let videoChapters = [];
+        let hasChapters = false;
+        let currentChapterIndex = 0;
+        let chapterTimer = null;
+        let timeTrackingTimer = null; // Add this for time-based tracking
         
         // HeyGen Avatar URLs - Random selection of professional avatars
         const avatarUrls = [
@@ -722,9 +936,26 @@
 
         function onPlayerStateChange(event) {
             if (event.data === YT.PlayerState.PLAYING) {
-                startTimeTracking();
+                // Only start tracking if auto-trigger is enabled and no tracking is currently active
+                if (autoTriggerEnabled) {
+                    if (hasChapters && videoChapters.length > 0 && !chapterTimer) {
+                        startChapterTracking();
+                        console.log('Player playing - started chapter tracking');
+                    } else if (!hasChapters && !timeTrackingTimer) {
+                        startTimeTracking();
+                        console.log('Player playing - started time-based tracking');
+                    }
+                }
             } else if (event.data === YT.PlayerState.PAUSED) {
-                stopTimeTracking();
+                // Stop all tracking
+                if (chapterTimer) {
+                    clearInterval(chapterTimer);
+                    chapterTimer = null;
+                }
+                if (timeTrackingTimer) {
+                    clearInterval(timeTrackingTimer);
+                    timeTrackingTimer = null;
+                }
             }
         }
 
@@ -745,19 +976,103 @@
 
             currentVideoId = videoId;
             
-            try {
-                player.loadVideoById(videoId);
-            } catch (error) {
-                console.error('Error loading video:', error);
-                alert('Error loading video. Please try again.');
-                return;
-            }
-            
             // Show loading state
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('explain-btn').classList.add('hidden');
             
             try {
+                // Load the video first
+                player.loadVideoById(videoId);
+                
+                // First, check if video has chapters
+                console.log('Checking for video chapters...');
+                console.log('API URL:', `${apiBaseUrl}/video-chapters/${videoId}`);
+                
+                try {
+                    const chaptersResponse = await fetch(`${apiBaseUrl}/video-chapters/${videoId}`);
+                    console.log('Chapters response status:', chaptersResponse.status);
+                    
+                    if (!chaptersResponse.ok) {
+                        throw new Error(`HTTP ${chaptersResponse.status}: ${chaptersResponse.statusText}`);
+                    }
+                    
+                    const chaptersData = await chaptersResponse.json();
+                    console.log('Raw chapters response:', chaptersData);
+                    
+                    if (chaptersData.success) {
+                        hasChapters = chaptersData.has_chapters;
+                        videoChapters = chaptersData.chapters || [];
+                        
+                        console.log('Chapter detection result:', {
+                            success: chaptersData.success,
+                            hasChapters: hasChapters,
+                            chaptersCount: videoChapters.length,
+                            chapters: videoChapters,
+                            totalChapters: chaptersData.total_chapters
+                        });
+                        
+                        // Additional validation
+                        if (videoChapters && Array.isArray(videoChapters) && videoChapters.length > 0) {
+                            console.log('✅ Chapters array is valid and contains data');
+                            console.log('First chapter:', videoChapters[0]);
+                            console.log('Chapter structure:', Object.keys(videoChapters[0]));
+                        } else {
+                            console.log('❌ Chapters array is invalid or empty');
+                            console.log('videoChapters type:', typeof videoChapters);
+                            console.log('videoChapters length:', videoChapters ? videoChapters.length : 'undefined');
+                        }
+                        
+                        if (hasChapters && videoChapters.length > 0) {
+                            console.log(`🎯 Video has ${videoChapters.length} chapters:`, videoChapters);
+                            
+                            // CRITICAL: Stop any existing time-based tracking immediately
+                            if (timeTrackingTimer) {
+                                clearInterval(timeTrackingTimer);
+                                timeTrackingTimer = null;
+                                console.log('🛑 Stopped existing time-based tracking');
+                            }
+                            
+                            // Update UI to show chapter-based mode
+                            document.querySelector('.setting-label[for="trigger-interval"]').textContent = 'Chapter-based (auto)';
+                            document.getElementById('trigger-interval').disabled = true;
+                            document.getElementById('trigger-interval').value = 'Chapters';
+                            
+                            // Force hasChapters to true if we have chapters
+                            hasChapters = true;
+                            console.log('✅ Chapter mode activated');
+                        } else {
+                            console.log('⏰ Video has no chapters, using time-based intervals');
+                            
+                            // CRITICAL: Stop any existing chapter-based tracking immediately
+                            if (chapterTimer) {
+                                clearInterval(chapterTimer);
+                                chapterTimer = null;
+                                console.log('🛑 Stopped existing chapter-based tracking');
+                            }
+                            
+                            // Update UI to show time-based mode
+                            document.querySelector('.setting-label[for="trigger-interval"]').textContent = 'Interval (seconds)';
+                            document.getElementById('trigger-interval').disabled = false;
+                            document.getElementById('trigger-interval').value = '30';
+                            
+                            // Force hasChapters to false if no chapters
+                            hasChapters = false;
+                            videoChapters = [];
+                            console.log('✅ Time-based mode activated');
+                        }
+                    } else {
+                        console.log('❌ Could not check chapters, defaulting to time-based mode');
+                        console.log('Error from API:', chaptersData.error);
+                        hasChapters = false;
+                        videoChapters = [];
+                    }
+                } catch (chapterError) {
+                    console.error('❌ Error checking chapters:', chapterError);
+                    console.log('Defaulting to time-based mode due to chapter check error');
+                    hasChapters = false;
+                    videoChapters = [];
+                }
+                
                 console.log('Making API request to:', `${apiBaseUrl}/process-video`);
                 console.log('Request payload:', {
                     youtube_url: url,
@@ -798,12 +1113,61 @@
                     
                     currentSegmentIndex = 0;
                     lastTriggerTime = 0;
+                    currentChapterIndex = 0;
                     
                     // Update UI with video title
                     document.querySelector('.header h1').textContent = `🎓 ${result.video_title}`;
                     
                     console.log(`Processed video: ${result.video_title}`);
                     console.log(`Found ${videoSegments.length} segments`);
+                    
+                    // Start appropriate tracking based on whether video has chapters
+                    if (hasChapters && videoChapters.length > 0) {
+                        console.log('🎯 Starting chapter-based tracking');
+                        console.log('Chapter data:', videoChapters);
+                        
+                        // Ensure any existing timers are cleared first
+                        if (timeTrackingTimer) {
+                            clearInterval(timeTrackingTimer);
+                            timeTrackingTimer = null;
+                            console.log('🛑 Cleared time tracking timer');
+                        }
+                        if (chapterTimer) {
+                            clearInterval(chapterTimer);
+                            chapterTimer = null;
+                            console.log('🛑 Cleared chapter timer');
+                        }
+                        
+                        // Force the state to be correct
+                        hasChapters = true;
+                        console.log('✅ Chapter mode confirmed - hasChapters:', hasChapters);
+                        
+                        startChapterTracking();
+                        debugTrackingState(); // Debug the state
+                    } else {
+                        console.log('⏰ Starting time-based tracking');
+                        console.log('No chapters detected - hasChapters:', hasChapters, 'chaptersCount:', videoChapters.length);
+                        
+                        // Ensure any existing timers are cleared first
+                        if (chapterTimer) {
+                            clearInterval(chapterTimer);
+                            chapterTimer = null;
+                            console.log('🛑 Cleared chapter timer');
+                        }
+                        if (timeTrackingTimer) {
+                            clearInterval(timeTrackingTimer);
+                            timeTrackingTimer = null;
+                            console.log('🛑 Cleared time tracking timer');
+                        }
+                        
+                        // Force the state to be correct
+                        hasChapters = false;
+                        videoChapters = [];
+                        console.log('✅ Time-based mode confirmed - hasChapters:', hasChapters);
+                        
+                        startTimeTracking();
+                        debugTrackingState(); // Debug the state
+                    }
                 } else {
                     throw new Error(result.error || 'Failed to process video');
                 }
@@ -871,22 +1235,111 @@
         }
 
         function startTimeTracking() {
-            if (autoTriggerEnabled) {
-                setInterval(checkAutoTrigger, 1000);
+            if (autoTriggerEnabled && !hasChapters && videoChapters.length === 0) {
+                // Clear any existing timers first
+                if (chapterTimer) {
+                    clearInterval(chapterTimer);
+                    chapterTimer = null;
+                }
+                if (timeTrackingTimer) {
+                    clearInterval(timeTrackingTimer);
+                    timeTrackingTimer = null;
+                }
+                timeTrackingTimer = setInterval(checkAutoTrigger, 1000);
+                console.log('Started time-based tracking');
+            }
+        }
+
+        function startChapterTracking() {
+            console.log('🚀 startChapterTracking called with:', {
+                autoTriggerEnabled,
+                hasChapters,
+                chaptersCount: videoChapters.length
+            });
+            
+            if (autoTriggerEnabled && hasChapters && videoChapters.length > 0) {
+                // Clear any existing timer
+                if (chapterTimer) {
+                    clearInterval(chapterTimer);
+                    console.log('🛑 Cleared existing chapter timer');
+                }
+                if (timeTrackingTimer) {
+                    clearInterval(timeTrackingTimer);
+                    timeTrackingTimer = null;
+                    console.log('🛑 Cleared time tracking timer');
+                }
+                
+                // Check every second for chapter transitions
+                chapterTimer = setInterval(checkChapterTransition, 1000);
+                console.log('✅ Started chapter-based tracking with timer ID:', chapterTimer);
+                console.log('📊 Chapter data available:', videoChapters);
+            } else {
+                console.log('❌ startChapterTracking blocked:', {
+                    autoTriggerEnabled,
+                    hasChapters,
+                    chaptersCount: videoChapters.length
+                });
             }
         }
 
         function stopTimeTracking() {
-            // Clear interval if needed
+            // Stop all tracking modes
+            if (chapterTimer) {
+                clearInterval(chapterTimer);
+                chapterTimer = null;
+            }
+            if (timeTrackingTimer) {
+                clearInterval(timeTrackingTimer);
+                timeTrackingTimer = null;
+            }
+        }
+
+        function checkChapterTransition() {
+            if (!autoTriggerEnabled || isProcessing || !hasChapters || videoChapters.length === 0) {
+                console.log('🚫 Chapter transition check blocked:', {
+                    autoTriggerEnabled,
+                    isProcessing,
+                    hasChapters,
+                    chaptersCount: videoChapters.length
+                });
+                return;
+            }
+            
+            const currentTime = player.getCurrentTime();
+            console.log(`🔍 Checking chapter transition at ${currentTime}s`);
+            
+            // Find current chapter
+            const currentChapter = videoChapters.find(chapter => 
+                currentTime >= chapter.start_time && currentTime <= chapter.end_time
+            );
+            
+            if (currentChapter) {
+                const chapterIndex = videoChapters.indexOf(currentChapter);
+                console.log(`📍 Currently in chapter: ${currentChapter.title} (index: ${chapterIndex})`);
+                
+                // Only trigger popup when we're near the end of the current chapter (within 1 second)
+                // Don't trigger on chapter start or transition
+                const timeUntilChapterEnd = currentChapter.end_time - currentTime;
+                if (timeUntilChapterEnd <= 1 && timeUntilChapterEnd > 0) {
+                    console.log(`⏰ Near end of chapter: ${currentChapter.title}, triggering popup`);
+                    triggerChapterPopup(currentChapter);
+                }
+            } else {
+                console.log('❌ Not in any chapter at current time');
+            }
         }
 
         function checkAutoTrigger() {
-            if (!autoTriggerEnabled || isProcessing) return;
+            // Multiple safety checks to ensure this never runs with chapters
+            if (!autoTriggerEnabled || isProcessing || hasChapters || videoChapters.length > 0) {
+                return;
+            }
             
             const currentTime = player.getCurrentTime();
             const timeSinceLastTrigger = currentTime - lastTriggerTime;
             
             if (timeSinceLastTrigger >= triggerInterval) {
+                console.log(`Time-based trigger: ${timeSinceLastTrigger}s elapsed, triggering popup`);
                 triggerPopup();
                 lastTriggerTime = currentTime;
             }
@@ -978,6 +1431,71 @@
                 } else if (narrationBtn) {
                     narrationBtn.style.display = 'none';
                 }
+            }
+            
+            isProcessing = false;
+        }
+
+        async function triggerChapterPopup(chapter) {
+            if (isProcessing) return;
+            isProcessing = true;
+            
+            // Pause video
+            player.pauseVideo();
+            
+            // Show popup
+            document.getElementById('learning-popup').classList.add('active');
+            document.getElementById('summary-text').textContent = `Chapter: ${chapter.title}\nGenerating chapter explanation...`;
+            
+            // Show avatar if enabled
+            showAvatarInPopup();
+            
+            try {
+                // Generate chapter-specific explanation
+                const response = await fetch(`${apiBaseUrl}/learning-point`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        segment_index: currentChapterIndex,
+                        timestamp: chapter.start_time,
+                        transcript: `Chapter: ${chapter.title}`,
+                        current_time: chapter.start_time,
+                        segments: videoSegments,
+                        chapter_info: {
+                            title: chapter.title,
+                            start_time: chapter.start_time,
+                            end_time: chapter.end_time,
+                            duration: chapter.duration
+                        }
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success && result.learning_point && result.learning_point.summary) {
+                    document.getElementById('summary-text').textContent = result.learning_point.summary;
+                } else if (result.error) {
+                    document.getElementById('summary-text').textContent = 'Error: ' + result.error;
+                } else {
+                    document.getElementById('summary-text').textContent = `Chapter: ${chapter.title}\n\nThis chapter covers ${chapter.duration} seconds of content.`;
+                }
+            } catch (error) {
+                console.error('Error generating chapter explanation:', error);
+                document.getElementById('summary-text').textContent = `Chapter: ${chapter.title}\n\nThis chapter covers ${chapter.duration} seconds of content.`;
+            }
+            
+            // Play background music if enabled
+            if (bgmEnabled) {
+                playBackgroundMusic();
+            }
+            
+            // Show AI narration button if avatar is enabled
+            const narrationBtn = document.getElementById('ai-narration-btn');
+            if (showAvatar && narrationBtn) {
+                narrationBtn.style.display = 'inline-block';
+            } else if (narrationBtn) {
+                narrationBtn.style.display = 'none';
             }
             
             isProcessing = false;
@@ -1087,6 +1605,175 @@
             return avatarUrls[randomIndex];
         }
 
+        // Chat functionality
+        let chatEnabled = false;
+        let chatHistory = [];
+
+        function toggleChat() {
+            const chatSection = document.getElementById('chat-section');
+            const chatToggleBtn = document.getElementById('chat-toggle-btn');
+            
+            if (chatEnabled) {
+                chatSection.style.display = 'none';
+                chatToggleBtn.textContent = '💬 Ask Questions';
+                chatToggleBtn.style.background = 'linear-gradient(135deg, #667eea, #764ba2) !important';
+            } else {
+                chatSection.style.display = 'block';
+                chatToggleBtn.textContent = '❌ Close Chat';
+                chatToggleBtn.style.background = 'rgba(255,0,0,0.8) !important';
+            }
+            
+            chatEnabled = !chatEnabled;
+        }
+
+        function sendChatMessage() {
+            const chatInput = document.getElementById('chat-input');
+            const chatSendBtn = document.getElementById('chat-send-btn');
+            const question = chatInput.value.trim();
+            
+            if (!question) return;
+            
+            // Disable input and button while processing
+            chatInput.disabled = true;
+            chatSendBtn.disabled = true;
+            chatSendBtn.textContent = 'Sending...';
+            
+            // Add user message to chat
+            addChatMessage(question, 'user');
+            chatInput.value = '';
+            
+            // Get current video transcript
+            const currentTime = player.getCurrentTime();
+            const currentSegment = findCurrentSegment(currentTime);
+            let videoTranscript = '';
+            
+            if (currentSegment && currentSegment.transcript) {
+                videoTranscript = currentSegment.transcript;
+            } else {
+                // Fallback to all segments transcript
+                videoTranscript = videoSegments.map(seg => seg.transcript).join(' ');
+            }
+            
+            // Send question to API
+            fetch(`${apiBaseUrl}/chat-question`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    question: question,
+                    video_transcript: videoTranscript,
+                    current_time: currentTime
+                })
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    addChatMessage(result.answer, 'bot');
+                } else {
+                    addChatMessage('Sorry, I encountered an error. Please try again.', 'bot');
+                }
+            })
+            .catch(error => {
+                console.error('Error sending chat message:', error);
+                addChatMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            })
+            .finally(() => {
+                // Re-enable input and button
+                chatInput.disabled = false;
+                chatSendBtn.disabled = false;
+                chatSendBtn.textContent = 'Send';
+                chatInput.focus();
+            });
+        }
+
+        function addChatMessage(message, sender) {
+            const chatMessages = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            contentDiv.textContent = message;
+            
+            messageDiv.appendChild(contentDiv);
+            chatMessages.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            
+            // Store in history
+            chatHistory.push({ sender, message, timestamp: new Date() });
+        }
+
+        // Debug function to check current state
+        function debugTrackingState() {
+            console.log('=== TRACKING STATE DEBUG ===');
+            console.log('autoTriggerEnabled:', autoTriggerEnabled);
+            console.log('hasChapters:', hasChapters);
+            console.log('videoChapters:', videoChapters);
+            console.log('currentChapterIndex:', currentChapterIndex);
+            console.log('chapterTimer:', chapterTimer);
+            console.log('timeTrackingTimer:', timeTrackingTimer);
+            console.log('currentTime:', player ? player.getCurrentTime() : 'N/A');
+            
+            if (videoChapters.length > 0) {
+                console.log('Chapter details:');
+                videoChapters.forEach((chapter, index) => {
+                    console.log(`  Chapter ${index}: ${chapter.title} (${chapter.start_time}s - ${chapter.end_time}s)`);
+                });
+            }
+            console.log('==========================');
+        }
+
+        // Test function to manually check chapters
+        async function testChapterDetection() {
+            if (!currentVideoId) {
+                console.log('❌ No video loaded. Please load a video first.');
+                return;
+            }
+            
+            console.log('🧪 Testing chapter detection for video:', currentVideoId);
+            console.log('API URL:', `${apiBaseUrl}/video-chapters/${currentVideoId}`);
+            
+            try {
+                const response = await fetch(`${apiBaseUrl}/video-chapters/${currentVideoId}`);
+                console.log('Response status:', response.status);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                console.log('📊 Raw API Response:', data);
+                
+                if (data.success) {
+                    console.log('✅ API call successful');
+                    console.log('has_chapters:', data.has_chapters);
+                    console.log('total_chapters:', data.total_chapters);
+                    console.log('chapters array:', data.chapters);
+                    
+                    if (data.chapters && Array.isArray(data.chapters)) {
+                        console.log('📚 Chapters array is valid');
+                        console.log('Array length:', data.chapters.length);
+                        
+                        if (data.chapters.length > 0) {
+                            console.log('🎯 First chapter:', data.chapters[0]);
+                            console.log('Chapter keys:', Object.keys(data.chapters[0]));
+                        }
+                    } else {
+                        console.log('❌ Chapters array is invalid');
+                        console.log('Type:', typeof data.chapters);
+                    }
+                } else {
+                    console.log('❌ API call failed');
+                    console.log('Error:', data.error);
+                }
+            } catch (error) {
+                console.error('❌ Error testing chapter detection:', error);
+            }
+        }
+
         function showAvatarInPopup() {
             if (showAvatar) {
                 const avatarSection = document.getElementById('avatar-section');
@@ -1107,14 +1794,38 @@
             switch(settingId) {
                 case 'auto-trigger':
                     autoTriggerEnabled = toggle.classList.contains('active');
+                    
+                    // Start appropriate tracking based on video type
+                    if (autoTriggerEnabled) {
+                        if (hasChapters && videoChapters.length > 0) {
+                            console.log('Auto-trigger enabled - starting chapter tracking');
+                            startChapterTracking();
+                        } else {
+                            console.log('Auto-trigger enabled - starting time tracking');
+                            startTimeTracking();
+                        }
+                    } else {
+                        // Stop all tracking
+                        console.log('Auto-trigger disabled - stopping all tracking');
+                        if (chapterTimer) {
+                            clearInterval(chapterTimer);
+                            chapterTimer = null;
+                        }
+                        if (timeTrackingTimer) {
+                            clearInterval(timeTrackingTimer);
+                            timeTrackingTimer = null;
+                        }
+                    }
                     break;
-                            case 'show-avatar':
-                showAvatar = toggle.classList.contains('active');
-                // Update avatar display if popup is currently open
-                if (document.getElementById('learning-popup').classList.contains('active')) {
-                    showAvatarInPopup();
-                }
-                break;
+                    
+                case 'show-avatar':
+                    showAvatar = toggle.classList.contains('active');
+                    // Update avatar display if popup is currently open
+                    if (document.getElementById('learning-popup').classList.contains('active')) {
+                        showAvatarInPopup();
+                    }
+                    break;
+                    
                 case 'bgm-enabled':
                     bgmEnabled = toggle.classList.contains('active');
                     break;
@@ -1224,6 +1935,17 @@
 
             // Add event listener for Start/Stop AI Narration button
             setupAINarrationButton();
+            
+            // Add Enter key support for chat input
+            const chatInput = document.getElementById('chat-input');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        sendChatMessage();
+                    }
+                });
+            }
         });
     </script>
 </body>

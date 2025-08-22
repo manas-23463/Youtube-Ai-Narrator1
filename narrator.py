@@ -215,6 +215,60 @@ class ElevenLabsTTS:
             return []
 
 
+class OpenAITTS:
+    """Synthesizes text to speech using OpenAI's TTS API"""
+    
+    def __init__(self, api_key: str = None, voice: str = "alloy"):
+        """
+        Initialize OpenAI TTS
+        
+        Args:
+            api_key: OpenAI API key (if None, uses environment variable)
+            voice: Voice to use for synthesis (default: alloy)
+        """
+        self.api_key = api_key or os.getenv('OPENAI_API_KEY')
+        if not self.api_key:
+            raise ValueError("OpenAI API key not provided. Set OPENAI_API_KEY environment variable.")
+        
+        self.voice = voice
+        self.client = openai.OpenAI(api_key=self.api_key)
+    
+    def synthesize_speech(self, text: str, output_path: str = None) -> str:
+        """
+        Synthesize text to speech using OpenAI TTS
+        
+        Args:
+            text: Text to synthesize
+            output_path: Output file path (if None, creates temp file)
+            
+        Returns:
+            Path to generated audio file
+        """
+        try:
+            if output_path is None:
+                output_path = tempfile.mktemp(suffix='.mp3')
+            
+            logger.info(f"OpenAI TTS: Synthesizing speech with voice '{self.voice}': {text[:50]}...")
+            
+            # Call OpenAI TTS API
+            response = self.client.audio.speech.create(
+                model="tts-1",
+                voice=self.voice,
+                input=text
+            )
+            
+            # Save the audio
+            with open(output_path, 'wb') as f:
+                f.write(response.content)
+            
+            logger.info(f"OpenAI TTS: Speech synthesized: {output_path}")
+            return output_path
+            
+        except Exception as e:
+            logger.error(f"Error in OpenAI TTS: {str(e)}")
+            raise
+
+
 class ConceptNarrator:
     """Main class that combines AI explanation generation and TTS"""
     

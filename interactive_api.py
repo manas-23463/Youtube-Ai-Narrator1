@@ -268,12 +268,14 @@ def extract_video_id(url: str) -> Optional[str]:
             return match.group(1)
     return None
 
-def generate_ai_summary(text: str, is_time_specific: bool = False) -> str:
+def generate_ai_summary(text: str, is_time_specific: bool = False, chapter_context: str = None) -> str:
     """Generate AI summary using OpenAI GPT"""
     try:
         client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
         
-        if is_time_specific:
+        if chapter_context:
+            system_prompt = f"You are an educational AI assistant. The user is watching a video chapter titled '{chapter_context}'. Create a clear, engaging summary of what was covered in this chapter. Focus on key concepts, main points, and how this chapter connects to the overall topic. Keep it under 100 words and make it easy to understand."
+        elif is_time_specific:
             system_prompt = "You are an educational AI assistant. Create a concise, engaging explanation of the video content up to this specific point in time. Focus on what has been covered so far and help learners understand the key concepts presented. Keep it under 100 words and make it easy to understand."
         else:
             system_prompt = "You are an educational AI assistant. Create a concise, engaging summary of the given text that helps learners understand the key concepts. Keep it under 100 words and make it easy to understand."
@@ -325,13 +327,23 @@ def extract_transcript_up_to_time(segments: List[VideoSegment], current_time: fl
         logger.warning("No word timestamps available, using full transcript")
         return segment.transcript
 
-def generate_audio_narration(text: str, voice_id: str = "21m00Tcm4TlvDq8ikWAM") -> Optional[str]:
-    """Generate audio narration using ElevenLabs"""
+def generate_audio_narration(text: str, voice: str = "alloy") -> Optional[str]:
+    """Generate audio narration using OpenAI TTS"""
     try:
-        tts = ElevenLabsTTS(voice_id=voice_id)
-        audio_data = tts.synthesize_speech(text)
+        from narrator import OpenAITTS
+        tts = OpenAITTS(voice=voice)
+        audio_path = tts.synthesize_speech(text)
         
-        # Convert to base64 for web delivery
+        # Read audio file and convert to base64 for web delivery
+        with open(audio_path, 'rb') as f:
+            audio_data = f.read()
+        
+        # Clean up temporary file
+        try:
+            os.remove(audio_path)
+        except:
+            pass
+        
         audio_b64 = base64.b64encode(audio_data).decode('utf-8')
         return f"data:audio/mpeg;base64,{audio_b64}"
         
@@ -454,6 +466,7 @@ async def create_learning_point_local(request: dict):
         transcript = request.get("transcript")
         current_time = request.get("current_time")
         segments = request.get("segments")
+        chapter_info = request.get("chapter_info")  # New field for chapter information
         
         logger.info(f"Creating learning point for segment {segment_index} at {timestamp}s (current_time: {current_time})")
         
@@ -472,37 +485,109 @@ async def create_learning_point_local(request: dict):
         
         logger.info(f"Relevant transcript length: {len(relevant_transcript)}. Content: {relevant_transcript[:100]}...")
         
-        # If paused time is less than 10 seconds, show not enough content message
-        if current_time is not None and float(current_time) < 10:
-            summary = "There is not enough content yet to explain. Please continue watching."
-        elif not relevant_transcript or len(relevant_transcript.strip()) < 20:
-            summary = "There is not enough content yet to explain. Please continue watching."
+        # If chapter info is provided, create chapter-specific summary
+        if chapter_info:
+            chapter_title = chapter_info.get('title', 'Unknown Chapter')
+            chapter_duration = chapter_info.get('duration', 0)
+            
+            if chapter_duration < 10:
+                summary = f"Chapter: {chapter_title}\n\nThis is a brief chapter covering {chapter_duration} seconds. Continue watching to learn more about this topic."
+            else:
+                # Generate AI summary for the chapter
+                summary = generate_ai_summary(relevant_transcript, is_time_specific=True, chapter_context=chapter_title)
         else:
-            # Generate summary for the specific portion up to the paused time
-            summary = generate_ai_summary(relevant_transcript, is_time_specific=True)
+            # Original logic for time-based intervals
+            if current_time is not None and float(current_time) < 10:
+                summary = "There is not enough content yet to explain. Please continue watching."
+            elif not relevant_transcript or len(relevant_transcript.strip()) < 20:
+                summary = "There is not enough content yet to explain. Please continue watching."
+            else:
+                # Generate summary for the specific portion up to the paused time
+                summary = generate_ai_summary(relevant_transcript, is_time_specific=True)
         
         # Create learning point
         learning_point = LearningPoint(
-            timestamp=timestamp,
-            segment_index=segment_index,
+            timestamp=float(timestamp) if timestamp else 0.0,
+            segment_index=segment_index or 0,
             summary=summary,
             transcript=relevant_transcript,
             saved_at=datetime.now().isoformat()
         )
         
-        # Store in memory
-        learning_points.append(learning_point.dict())
+        # Store learning point
+        learning_points.append(learning_point)
         
         return {
             "success": True,
-            "learning_point": learning_point.dict()
+            "learning_point": {
+                "timestamp": learning_point.timestamp,
+                "segment_index": learning_point.segment_index,
+                "summary": learning_point.summary,
+                "transcript": learning_point.transcript,
+                "saved_at": learning_point.saved_at
+            }
         }
         
     except Exception as e:
-        logger.error(f"Error generating learning point: {e}")
+        logger.error(f"Error creating learning point: {str(e)}")
         return {
             "success": False,
             "error": str(e)
+        }
+
+@app.get("/video-chapters/{video_id}")
+async def get_video_chapters(video_id: str):
+    """Get chapter information for a YouTube video"""
+    try:
+        from youtube_downloader import YouTubeDownloader
+        
+        # Construct YouTube URL from video ID
+        youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        # Create downloader instance (no output dir needed for info extraction)
+        downloader = YouTubeDownloader()
+        
+        # Extract chapters
+        chapters = downloader.extract_video_chapters(youtube_url)
+        
+        if chapters:
+            # Convert chapters to a more usable format
+            formatted_chapters = []
+            for i, chapter in enumerate(chapters):
+                start_time = chapter.get('start_time', 0)
+                end_time = chapter.get('end_time', 0)
+                title = chapter.get('title', f'Chapter {i+1}')
+                
+                formatted_chapters.append({
+                    'index': i,
+                    'start_time': start_time,
+                    'end_time': end_time,
+                    'title': title,
+                    'duration': end_time - start_time if end_time > start_time else 0
+                })
+            
+            return {
+                "success": True,
+                "has_chapters": True,
+                "chapters": formatted_chapters,
+                "total_chapters": len(formatted_chapters)
+            }
+        else:
+            return {
+                "success": True,
+                "has_chapters": False,
+                "chapters": [],
+                "total_chapters": 0
+            }
+            
+    except Exception as e:
+        logger.error(f"Error getting video chapters: {str(e)}")
+        return {
+            "success": False,
+            "error": str(e),
+            "has_chapters": False,
+            "chapters": [],
+            "total_chapters": 0
         }
 
 @app.get("/learning-points")
@@ -558,23 +643,144 @@ async def generate_avatar_video(request: dict):
 
 @app.post("/tts-narration")
 async def tts_narration(request: dict):
-    """Generate TTS audio for AI summary using ElevenLabs"""
+    """Generate TTS audio for AI summary using OpenAI TTS"""
     try:
         text = request.get("text", "")
-        voice_id = request.get("voice_id", "RvxJMEXhmyfed4d7O5xn")
+        # Use single OpenAI voice (alloy) instead of voice_id parameter
         if not text:
             return {"success": False, "error": "No text provided"}
-        from narrator import ElevenLabsTTS
-        tts = ElevenLabsTTS(voice_id=voice_id)
+        from narrator import OpenAITTS
+        tts = OpenAITTS(voice="alloy")
         audio_path = tts.synthesize_speech(text)
         # Read audio as base64
         import base64
         with open(audio_path, "rb") as f:
             audio_base64 = base64.b64encode(f.read()).decode("utf-8")
+        # Clean up temporary file
+        try:
+            import os
+            os.remove(audio_path)
+        except:
+            pass
         return {"success": True, "audio_base64": audio_base64}
     except Exception as e:
-        logger.error(f"Error generating TTS: {e}")
+        logger.error(f"Error generating OpenAI TTS: {e}")
         return {"success": False, "error": str(e)}
+
+@app.post("/chat-question")
+async def chat_question(request: dict):
+    """Handle chat questions related to video content"""
+    try:
+        question = request.get("question", "")
+        video_transcript = request.get("video_transcript", "")
+        current_time = request.get("current_time", 0)
+        
+        if not question:
+            return {"success": False, "error": "No question provided"}
+        
+        if not video_transcript:
+            return {"success": False, "error": "No video transcript available"}
+        
+        logger.info(f"Processing chat question: {question[:50]}...")
+        
+        # Check if question is related to video content
+        is_related = check_question_relevance(question, video_transcript)
+        
+        if not is_related:
+            return {
+                "success": True,
+                "answer": "Sorry, this question is not related to the video content. Please ask questions about what was discussed in the video.",
+                "is_related": False
+            }
+        
+        # Generate AI answer for related questions
+        answer = generate_chat_answer(question, video_transcript, current_time)
+        
+        return {
+            "success": True,
+            "answer": answer,
+            "is_related": True
+        }
+        
+    except Exception as e:
+        logger.error(f"Error processing chat question: {str(e)}")
+        return {"success": False, "error": str(e)}
+
+def check_question_relevance(question: str, video_transcript: str) -> bool:
+    """Check if a question is related to the video content"""
+    try:
+        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        prompt = f"""You are an AI assistant that determines if a user's question is related to the content of a video.
+
+Video Transcript: {video_transcript[:2000]}
+
+User Question: {question}
+
+Please analyze if the question is directly related to the video content. Consider:
+1. Does the question ask about concepts, topics, or information discussed in the video?
+2. Is the question about the video's subject matter, examples, or explanations?
+3. Would someone need to have watched the video to answer this question?
+
+Respond with ONLY "YES" if the question is related, or "NO" if it's not related to the video content."""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful AI that determines question relevance. Respond with only YES or NO."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=10,
+            temperature=0.1
+        )
+        
+        answer = response.choices[0].message.content.strip().upper()
+        return answer == "YES"
+        
+    except Exception as e:
+        logger.error(f"Error checking question relevance: {str(e)}")
+        # Default to True if we can't determine relevance
+        return True
+
+def generate_chat_answer(question: str, video_transcript: str, current_time: float) -> str:
+    """Generate an AI answer for a chat question"""
+    try:
+        client = openai.OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        prompt = f"""You are a helpful AI tutor answering questions about a video. The user is asking about content that was discussed in the video.
+
+Video Transcript: {video_transcript[:3000]}
+
+Current Video Time: {current_time:.1f} seconds
+
+User Question: {question}
+
+Please provide a clear, helpful answer based on the video content. Your answer should:
+1. Be directly related to what was discussed in the video
+2. Be educational and easy to understand
+3. Reference specific concepts or examples from the video when possible
+4. Be SHORT and concise (1-2 sentences maximum)
+5. Help the user better understand the video content
+6. Stay within 100 words maximum
+
+Answer:"""
+        
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are a helpful AI tutor that provides SHORT, concise answers about video content. Keep responses to 1-2 sentences maximum."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=100,
+            temperature=0.7
+        )
+        
+        answer = response.choices[0].message.content.strip()
+        return answer
+        
+    except Exception as e:
+        logger.error(f"Error generating chat answer: {str(e)}")
+        return "I'm sorry, I encountered an error while processing your question. Please try again."
 
 if __name__ == "__main__":
     import uvicorn
