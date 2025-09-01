@@ -9,12 +9,16 @@ import base64
 import tempfile
 import logging
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Union
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import modal
 from dotenv import load_dotenv
+from fastapi.responses import StreamingResponse, Response, FileResponse, RedirectResponse
+from fastapi import Request
+import requests
+from urllib.parse import quote
 
 # Import existing modules
 from transcription import transcribe_and_segment
@@ -42,7 +46,7 @@ app.add_middleware(
 
 # Pydantic models
 class VideoProcessRequest(BaseModel):
-    youtube_url: str
+    video_url: str  # Changed from youtube_url to video_url to support both YouTube and S3
     auto_trigger: bool = True
     trigger_interval: int = 30
     show_avatar: bool = False
@@ -62,6 +66,7 @@ class VideoProcessResponse(BaseModel):
     video_title: str
     segments: List[VideoSegment]
     total_duration: float
+    video_type: str  # "youtube" or "s3"
     error: Optional[str] = None
 
 class LearningPoint(BaseModel):
@@ -77,7 +82,7 @@ learning_points = []
 # Create Modal app
 stub = modal.App("interactive-video-player-api")
 
-# Create image with all dependencies
+# Create image with all dependencies including S3 support
 interactive_image = (
     modal.Image.debian_slim(python_version="3.11")
     .apt_install("ffmpeg")
@@ -93,7 +98,9 @@ interactive_image = (
         "openai-whisper>=20231117",
         "yt-dlp>=2023.12.30",
         "pydub>=0.25.1",
-        "numpy>=1.24.3"
+        "numpy>=1.24.3",
+        "boto3>=1.34.0",  # Added for S3 support
+        "botocore>=1.34.0"  # Added for S3 support
     ])
     .add_local_dir("/Users/manasmore/Desktop/youtube-AI-narrator2", "/app")
 )
@@ -107,7 +114,7 @@ interactive_image = (
 )
 @modal.fastapi_endpoint(method="POST")
 def process_video_interactive(request: VideoProcessRequest):
-    """Process YouTube video for interactive learning experience"""
+    """Process video for interactive learning experience - supports both YouTube and S3"""
     try:
         import sys
         sys.path.append("/app")
@@ -119,53 +126,100 @@ def process_video_interactive(request: VideoProcessRequest):
         import os
         from datetime import datetime
         
+        # Detect video type (YouTube or S3)
+        video_type = detect_video_type(request.video_url)
+        logger.info(f"Detected video type: {video_type}")
+        
         # Extract video ID from URL
-        video_id = extract_video_id(request.youtube_url)
+        video_id = extract_video_id(request.video_url)
         if not video_id:
-            raise ValueError("Invalid YouTube URL")
+            raise ValueError(f"Invalid {video_type} URL")
         
-        # Download video
-        downloader = YouTubeDownloader()
-        video_info = downloader.get_video_info(request.youtube_url)
-        video_title = video_info.get('title', 'Unknown Title')
-        
-        # Download audio for transcription
-        with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_audio:
-            audio_path = temp_audio.name
-        
-        try:
-            downloader.download_audio(request.youtube_url, audio_path)
+        # Process video based on type
+        if video_type == "youtube":
+            # Use existing YouTube processing
+            downloader = YouTubeDownloader()
+            video_info = downloader.get_video_info(request.video_url)
+            video_title = video_info.get('title', 'Unknown Title')
             
-            # Transcribe and segment
-            segments = transcribe_and_segment(audio_path)
+            # Download audio for transcription
+            with tempfile.NamedTemporaryFile(suffix=".mp3", delete=False) as temp_audio:
+                audio_path = temp_audio.name
             
-            # Generate AI summaries for each segment
-            video_segments = []
-            for i, segment in enumerate(segments):
-                summary = generate_ai_summary(segment.text)
-                video_segments.append(VideoSegment(
-                    start=segment.start_time,
-                    end=segment.end_time,
-                    transcript=segment.text,
-                    summary=summary,
-                    confidence=segment.confidence
-                ))
+            try:
+                downloader.download_audio(request.video_url, audio_path)
+                
+                # Transcribe and segment
+                segments = transcribe_and_segment(audio_path)
+                
+                # Generate AI summaries for each segment
+                video_segments = []
+                for i, segment in enumerate(segments):
+                    summary = generate_ai_summary(segment.text)
+                    video_segments.append(VideoSegment(
+                        start=segment.start_time,
+                        end=segment.end_time,
+                        transcript=segment.text,
+                        summary=summary,
+                        confidence=segment.confidence
+                    ))
+                
+                # Calculate total duration
+                total_duration = max(seg.end for seg in video_segments) if video_segments else 0
+                
+                return VideoProcessResponse(
+                    success=True,
+                    video_id=video_id,
+                    video_title=video_title,
+                    segments=video_segments,
+                    total_duration=total_duration,
+                    video_type=video_type
+                )
+                
+            finally:
+                # Cleanup temporary files
+                if os.path.exists(audio_path):
+                    os.unlink(audio_path)
+        else:
+            # Process S3 video
+            video_title = f"S3 Video {datetime.now().strftime('%Y%m%d_%H%M%S')}"
             
-            # Calculate total duration
-            total_duration = max(seg.end for seg in video_segments) if video_segments else 0
-            
-            return VideoProcessResponse(
-                success=True,
-                video_id=video_id,
-                video_title=video_title,
-                segments=video_segments,
-                total_duration=total_duration
-            )
-            
-        finally:
-            # Cleanup temporary files
-            if os.path.exists(audio_path):
-                os.unlink(audio_path)
+            # Download S3 video and extract audio
+            with tempfile.TemporaryDirectory() as temp_dir:
+                video_path, audio_path, video_title = download_s3_video(request.video_url, temp_dir)
+                
+                try:
+                    # Transcribe and segment
+                    segments = transcribe_and_segment(audio_path)
+                    
+                    # Generate AI summaries for each segment
+                    video_segments = []
+                    for i, segment in enumerate(segments):
+                        summary = generate_ai_summary(segment.text)
+                        video_segments.append(VideoSegment(
+                            start=segment.start_time,
+                            end=segment.end_time,
+                            transcript=segment.text,
+                            summary=summary,
+                            confidence=segment.confidence
+                        ))
+                    
+                    # Calculate total duration
+                    total_duration = max(seg.end for seg in video_segments) if video_segments else 0
+                    
+                    return VideoProcessResponse(
+                        success=True,
+                        video_id=video_id,
+                        video_title=video_title,
+                        segments=video_segments,
+                        total_duration=total_duration,
+                        video_type=video_type
+                    )
+                    
+                finally:
+                    # Cleanup temporary files
+                    if os.path.exists(audio_path):
+                        os.unlink(audio_path)
                 
     except Exception as e:
         logger.error(f"Error processing video: {e}")
@@ -175,6 +229,7 @@ def process_video_interactive(request: VideoProcessRequest):
             video_title="",
             segments=[],
             total_duration=0,
+            video_type="unknown",
             error=str(e)
         )
 
@@ -254,19 +309,119 @@ def health_check():
     return {"status": "ok", "service": "Interactive AI Video Player API"}
 
 # Helper functions
-def extract_video_id(url: str) -> Optional[str]:
-    """Extract YouTube video ID from URL"""
-    import re
-    patterns = [
-        r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)',
-        r'youtube\.com\/watch\?.*v=([^&\n?#]+)'
+def detect_video_type(url: str) -> str:
+    """Detect if URL is YouTube or S3"""
+    if is_s3_url(url):
+        return "s3"
+    elif is_youtube_url(url):
+        return "youtube"
+    else:
+        raise ValueError("Unsupported video URL format")
+
+def is_s3_url(url: str) -> bool:
+    """Check if URL is an S3 URL"""
+    s3_patterns = [
+        r'^https://.*\.s3\.amazonaws\.com/.*\.(mp4|webm|mov|avi|mkv)$',
+        r'^https://s3\.amazonaws\.com/.*\.(mp4|webm|mov|avi|mkv)$',
+        r'^https://s3\..*\.amazonaws\.com/.*\.(mp4|webm|mov|avi|mkv)$'
     ]
     
-    for pattern in patterns:
-        match = re.search(pattern, url)
-        if match:
-            return match.group(1)
+    import re
+    for pattern in s3_patterns:
+        if re.match(pattern, url, re.IGNORECASE):
+            return True
+    return False
+
+def is_youtube_url(url: str) -> bool:
+    """Check if URL is a YouTube URL"""
+    youtube_patterns = [
+        r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)',
+        r'youtube\.com\/watch\?.*v='
+    ]
+    
+    import re
+    for pattern in youtube_patterns:
+        if re.search(pattern, url):
+            return True
+    return False
+
+def extract_video_id(url: str) -> Optional[str]:
+    """Extract video ID from URL (YouTube or S3)"""
+    if is_s3_url(url):
+        # For S3, use the full URL as ID since it's unique
+        return url
+    elif is_youtube_url(url):
+        # Extract YouTube video ID
+        import re
+        patterns = [
+            r'(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)',
+            r'youtube\.com\/watch\?.*v=([^&\n?#]+)'
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
     return None
+
+def download_s3_video(s3_url: str, output_dir: str) -> tuple:
+    """
+    Download video from S3 URL
+    
+    Args:
+        s3_url: S3 video URL
+        output_dir: Directory to save the video
+        
+    Returns:
+        Tuple of (video_path, audio_path, video_title)
+    """
+    try:
+        import requests
+        import os
+        from urllib.parse import urlparse
+        
+        # Parse S3 URL to get filename
+        parsed_url = urlparse(s3_url)
+        filename = os.path.basename(parsed_url.path)
+        if not filename:
+            filename = f"s3_video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+        
+        # Download video file
+        logger.info(f"Downloading S3 video: {s3_url}")
+        response = requests.get(s3_url, stream=True)
+        response.raise_for_status()
+        
+        # Save video file
+        video_path = os.path.join(output_dir, filename)
+        with open(video_path, 'wb') as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                f.write(chunk)
+        
+        # Extract audio using ffmpeg
+        audio_path = os.path.join(output_dir, f"{os.path.splitext(filename)[0]}_audio.wav")
+        
+        import subprocess
+        cmd = [
+            'ffmpeg', '-i', video_path,
+            '-vn',  # No video
+            '-acodec', 'pcm_s16le',  # PCM audio
+            '-ar', '16000',  # 16kHz sample rate
+            '-ac', '1',  # Mono
+            '-y',  # Overwrite output
+            audio_path
+        ]
+        
+        subprocess.run(cmd, check=True, capture_output=True)
+        
+        # Use filename as title
+        video_title = os.path.splitext(filename)[0].replace('_', ' ').replace('-', ' ')
+        
+        logger.info(f"S3 video downloaded successfully: {video_path}")
+        return video_path, audio_path, video_title
+        
+    except Exception as e:
+        logger.error(f"Error downloading S3 video: {e}")
+        raise
 
 def generate_ai_summary(text: str, is_time_specific: bool = False, chapter_context: str = None) -> str:
     """Generate AI summary using OpenAI GPT"""
@@ -354,14 +509,18 @@ def generate_audio_narration(text: str, voice: str = "alloy") -> Optional[str]:
 # Local development endpoints (for testing without Modal)
 @app.post("/process-video")
 async def process_video_local(request: VideoProcessRequest):
-    """Local endpoint for video processing"""
+    """Local endpoint for video processing - supports both YouTube and S3"""
     try:
-        logger.info(f"Processing video request: {request.youtube_url}")
+        logger.info(f"Processing video request: {request.video_url}")
+        
+        # Detect video type (YouTube or S3)
+        video_type = detect_video_type(request.video_url)
+        logger.info(f"Detected video type: {video_type}")
         
         # Extract video ID from URL
-        video_id = extract_video_id(request.youtube_url)
+        video_id = extract_video_id(request.video_url)
         if not video_id:
-            raise ValueError("Invalid YouTube URL")
+            raise ValueError(f"Invalid {video_type} URL")
         
         logger.info(f"Extracted video ID: {video_id}")
         
@@ -371,14 +530,20 @@ async def process_video_local(request: VideoProcessRequest):
         import tempfile
         import os
         
-        # Download video info and audio
+        # Create output directory
         fixed_output_dir = os.path.join(os.getcwd(), 'outputs', 'tmp')
         os.makedirs(fixed_output_dir, exist_ok=True)
-        downloader = YouTubeDownloader(output_dir=fixed_output_dir)
         
-        # Download the video to get info
-        logger.info("Downloading video to get info...")
-        video_path, audio_path, video_title = downloader.download_video(request.youtube_url)
+        # Process video based on type
+        if video_type == "youtube":
+            # Use existing YouTube processing
+            downloader = YouTubeDownloader(output_dir=fixed_output_dir)
+            logger.info("Processing YouTube video...")
+            video_path, audio_path, video_title = downloader.download_video(request.video_url)
+        else:
+            # Process S3 video
+            logger.info("Processing S3 video...")
+            video_path, audio_path, video_title = download_s3_video(request.video_url, fixed_output_dir)
         
         # Log contents of output directory after download
         logger.info(f"[DEBUG] Output dir contents after download: {os.listdir(fixed_output_dir)}")
@@ -437,7 +602,8 @@ async def process_video_local(request: VideoProcessRequest):
                 video_id=video_id,
                 video_title=video_title,
                 segments=video_segments,
-                total_duration=total_duration
+                total_duration=total_duration,
+                video_type=video_type
             )
             
         finally:
@@ -454,6 +620,7 @@ async def process_video_local(request: VideoProcessRequest):
             video_title="",
             segments=[],
             total_duration=0,
+            video_type="unknown",
             error=str(e)
         )
 
@@ -537,12 +704,28 @@ async def create_learning_point_local(request: dict):
 
 @app.get("/video-chapters/{video_id}")
 async def get_video_chapters(video_id: str):
-    """Get chapter information for a YouTube video"""
+    """Get chapter information for a video (YouTube or S3)"""
     try:
-        from youtube_downloader import YouTubeDownloader
+        # Check if this is an S3 URL (full URL stored as video_id)
+        if is_s3_url(video_id):
+            # S3 videos don't have chapters, return empty response
+            return {
+                "success": True,
+                "has_chapters": False,
+                "chapters": [],
+                "total_chapters": 0,
+                "video_type": "s3"
+            }
         
-        # Construct YouTube URL from video ID
-        youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+        # Handle YouTube videos (extract video ID from URL)
+        if is_youtube_url(video_id):
+            # This is a full YouTube URL, extract the video ID
+            youtube_url = video_id
+        else:
+            # This is just a video ID, construct the full URL
+            youtube_url = f"https://www.youtube.com/watch?v={video_id}"
+        
+        from youtube_downloader import YouTubeDownloader
         
         # Create downloader instance (no output dir needed for info extraction)
         downloader = YouTubeDownloader()
@@ -570,14 +753,16 @@ async def get_video_chapters(video_id: str):
                 "success": True,
                 "has_chapters": True,
                 "chapters": formatted_chapters,
-                "total_chapters": len(formatted_chapters)
+                "total_chapters": len(formatted_chapters),
+                "video_type": "youtube"
             }
         else:
             return {
                 "success": True,
                 "has_chapters": False,
                 "chapters": [],
-                "total_chapters": 0
+                "total_chapters": 0,
+                "video_type": "youtube"
             }
             
     except Exception as e:
@@ -587,7 +772,8 @@ async def get_video_chapters(video_id: str):
             "error": str(e),
             "has_chapters": False,
             "chapters": [],
-            "total_chapters": 0
+            "total_chapters": 0,
+            "video_type": "unknown"
         }
 
 @app.get("/learning-points")
@@ -781,6 +967,146 @@ Answer:"""
     except Exception as e:
         logger.error(f"Error generating chat answer: {str(e)}")
         return "I'm sorry, I encountered an error while processing your question. Please try again."
+
+@app.get("/s3-proxy")
+async def s3_proxy(url: str, request: Request):
+    """Proxy S3/HTTPS video with Range support to avoid CORS/player issues"""
+    try:
+        if not url.startswith("http"):
+            return Response(status_code=400, content="Invalid URL")
+        
+        # Forward Range header if present
+        headers = {}
+        range_header = request.headers.get("range") or request.headers.get("Range")
+        if range_header:
+            headers["Range"] = range_header
+        
+        upstream = requests.get(url, headers=headers, stream=True, timeout=30)
+        status_code = upstream.status_code
+        
+        # Determine content type
+        content_type = upstream.headers.get("Content-Type", "video/mp4")
+        content_length = upstream.headers.get("Content-Length")
+        accept_ranges = upstream.headers.get("Accept-Ranges", "bytes")
+        content_range = upstream.headers.get("Content-Range")
+        
+        def iter_stream():
+            for chunk in upstream.iter_content(chunk_size=1024 * 64):
+                if chunk:
+                    yield chunk
+        
+        headers_out = {
+            "Content-Type": content_type,
+            "Accept-Ranges": accept_ranges,
+            "Access-Control-Allow-Origin": "*",
+        }
+        if content_length:
+            headers_out["Content-Length"] = content_length
+        if content_range:
+            headers_out["Content-Range"] = content_range
+        
+        return StreamingResponse(iter_stream(), status_code=status_code, headers=headers_out)
+    except Exception as e:
+        logger.error(f"Error in s3_proxy: {e}")
+        return Response(status_code=500, content=str(e))
+
+PLAYABLE_CACHE_DIR = os.path.join(os.getcwd(), 'outputs', 'playable_cache')
+os.makedirs(PLAYABLE_CACHE_DIR, exist_ok=True)
+
+@app.get("/s3-playable")
+async def s3_playable(url: str):
+    """Return a browser-playable MP4 (H.264/AAC). Transcodes if needed and caches the result."""
+    try:
+        if not url.startswith("http"):
+            return Response(status_code=400, content="Invalid URL")
+        
+        # Check if ffmpeg is available
+        try:
+            subprocess.run(['ffmpeg', '-version'], capture_output=True, check=True)
+            ffmpeg_available = True
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            ffmpeg_available = False
+            logger.warning("ffmpeg not available, falling back to direct proxy")
+        
+        # If ffmpeg not available, redirect to proxy
+        if not ffmpeg_available:
+            return RedirectResponse(url=f"/s3-proxy?url={quote(url)}")
+        
+        # Cache key from URL
+        key = hashlib.sha256(url.encode("utf-8")).hexdigest()[:32]
+        src_path = os.path.join(PLAYABLE_CACHE_DIR, f"{key}.src")
+        mp4_path = os.path.join(PLAYABLE_CACHE_DIR, f"{key}.mp4")
+        marker_ok = os.path.join(PLAYABLE_CACHE_DIR, f"{key}.ok")
+        
+        # If already prepared, return immediately
+        if os.path.exists(marker_ok) and os.path.exists(mp4_path):
+            return FileResponse(mp4_path, media_type="video/mp4", headers={
+                "Access-Control-Allow-Origin": "*",
+                "Cache-Control": "public, max-age=3600"
+            })
+        
+        # Download source if not present
+        if not os.path.exists(src_path):
+            r = requests.get(url, stream=True, timeout=60)
+            r.raise_for_status()
+            with open(src_path, 'wb') as f:
+                for chunk in r.iter_content(chunk_size=1024 * 256):
+                    if chunk:
+                        f.write(chunk)
+        
+        # Probe codecs
+        def ffprobe_stream(codec_type):
+            try:
+                out = subprocess.check_output([
+                    'ffprobe', '-v', 'error', '-select_streams', f'{codec_type}:0',
+                    '-show_entries', 'stream=codec_name,profile,pix_fmt', '-of', 'default=nw=1', src_path
+                ], timeout=30).decode('utf-8', errors='ignore')
+                return out
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                return ""
+        
+        vinfo = ffprobe_stream('v')
+        ainfo = ffprobe_stream('a')
+        vcodec_ok = ('codec_name=h264' in vinfo)
+        acodec_ok = ('codec_name=aac' in ainfo or 'codec_name=mp3' in ainfo)
+        
+        # Decide whether to transcode
+        need_transcode = not (vcodec_ok and acodec_ok)
+        
+        if need_transcode or not os.path.exists(mp4_path):
+            # Transcode to H.264/AAC, baseline for max compatibility
+            tmp_out = mp4_path + ".tmp.mp4"
+            cmd = [
+                'ffmpeg', '-y', '-i', src_path,
+                '-map', '0:v:0', '-map', '0:a:0?',
+                '-c:v', 'libx264', '-pix_fmt', 'yuv420p', '-profile:v', 'baseline', '-level', '3.1', '-movflags', '+faststart',
+                '-c:a', 'aac', '-b:a', '128k',
+                tmp_out
+            ]
+            subprocess.run(cmd, check=True, timeout=300)
+            # Atomically move
+            if os.path.exists(mp4_path):
+                try:
+                    os.remove(mp4_path)
+                except Exception:
+                    pass
+            os.replace(tmp_out, mp4_path)
+        
+        # Mark as ready
+        with open(marker_ok, 'w') as f:
+            f.write('ok')
+        
+        return FileResponse(mp4_path, media_type="video/mp4", headers={
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "public, max-age=3600"
+        })
+    except Exception as e:
+        logger.error(f"Error in s3_playable: {e}")
+        # Fallback to proxy on any error
+        try:
+            return RedirectResponse(url=f"/s3-proxy?url={quote(url)}")
+        except:
+            return Response(status_code=500, content=f"Error processing video: {str(e)}")
 
 if __name__ == "__main__":
     import uvicorn

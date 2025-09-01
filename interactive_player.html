@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Learning Video Player</title>
     <script src="https://www.youtube.com/iframe_api"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@vime/core@^5/themes/default.css">
+    <script type="module" src="https://cdn.jsdelivr.net/npm/@vime/core@^5/dist/vime/vime.esm.js"></script>
+    <script nomodule src="https://cdn.jsdelivr.net/npm/@vime/core@^5/dist/vime.js"></script>
     <style>
         * {
             margin: 0;
@@ -14,42 +17,59 @@
 
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 25%, #0f3460 50%, #533483 75%, #7209b7 100%);
             min-height: 100vh;
-            color: #333;
+            color: #ffffff;
+            position: relative;
         }
 
         .container {
             max-width: 1400px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 30px;
+            position: relative;
+            z-index: 1;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 30px;
-            color: white;
+            margin-bottom: 40px;
+            color: #ffffff;
         }
 
         .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 15px;
+            color: #ffffff;
+            letter-spacing: -0.02em;
         }
 
         .header p {
-            font-size: 1.1rem;
-            opacity: 0.9;
+            font-size: 1.2rem;
+            color: #a0aec0;
+            font-weight: 400;
         }
 
         .url-input-section {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 35px;
+            margin-bottom: 35px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .url-input-section::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
         }
 
         .url-input {
@@ -60,17 +80,30 @@
 
         .url-input input {
             flex: 1;
-            padding: 15px 20px;
-            border: none;
+            padding: 16px 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 12px;
             font-size: 16px;
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            transition: all 0.3s ease;
+            font-weight: 400;
+        }
+
+        .url-input input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+        }
+
+        .url-input input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
         }
 
         .url-input button {
-            padding: 15px 30px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            padding: 16px 32px;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
             color: white;
             border: none;
             border-radius: 12px;
@@ -78,11 +111,12 @@
             font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 212, 255, 0.3);
         }
 
         .url-input button:hover {
             transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+            box-shadow: 0 8px 25px rgba(0, 212, 255, 0.4);
         }
 
         .url-input button:disabled {
@@ -98,26 +132,58 @@
 
         .player-container {
             position: relative;
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 35px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         #youtube-player {
             width: 100%;
             height: 500px;
-            border-radius: 15px;
+            border-radius: 20px;
             overflow: hidden;
+            box-shadow: 
+                0 12px 24px rgba(0, 0, 0, 0.15),
+                0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* S3 Video Player specific styling */
+        #youtube-player.s3-mode {
+            height: 600px !important;
+            min-height: 600px;
+            max-height: none !important;
+            overflow: visible !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 0 !important;
+            position: relative !important;
+        }
+
+        #s3-video-player {
+            width: auto !important;
+            height: auto !important;
+            max-width: 100% !important;
+            max-height: 100% !important;
+            object-fit: contain !important;
+            border-radius: 15px;
+            display: block !important;
+            margin: 0 auto !important;
+            position: absolute !important;
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important;
         }
 
         .floating-cta {
             position: absolute;
             bottom: 30px;
             right: 30px;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: linear-gradient(135deg, #667eea, #764ba2, #f093fb);
             color: white;
             border: none;
             border-radius: 50px;
@@ -125,7 +191,7 @@
             font-size: 16px;
             font-weight: 600;
             cursor: pointer;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.3);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
             transition: all 0.3s ease;
             z-index: 100;
         }
@@ -328,19 +394,20 @@
         }
 
         .settings-panel {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border-radius: 20px;
-            padding: 25px;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(20px);
+            border-radius: 16px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 25px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         }
 
         .settings-title {
             font-size: 1.2rem;
             font-weight: 600;
             margin-bottom: 20px;
-            color: white;
+            color: #ffffff;
         }
 
         .setting-group {
@@ -348,7 +415,7 @@
             justify-content: space-between;
             align-items: center;
             margin-bottom: 15px;
-            color: white;
+            color: #ffffff;
         }
 
         .setting-label {
@@ -363,46 +430,58 @@
 
         .toggle-switch {
             position: relative;
-            width: 50px;
-            height: 25px;
-            background: rgba(255,255,255,0.3);
-            border-radius: 25px;
+            width: 56px;
+            height: 28px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 28px;
             cursor: pointer;
             transition: all 0.3s ease;
         }
 
         .toggle-switch.active {
-            background: #667eea;
+            background: linear-gradient(135deg, #00d4ff, #0099cc);
+            box-shadow: 0 2px 8px rgba(0, 212, 255, 0.3);
         }
 
         .toggle-switch::after {
             content: '';
             position: absolute;
-            top: 2px;
-            left: 2px;
-            width: 21px;
-            height: 21px;
+            top: 3px;
+            left: 3px;
+            width: 22px;
+            height: 22px;
             background: white;
             border-radius: 50%;
             transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
         .toggle-switch.active::after {
-            transform: translateX(25px);
+            transform: translateX(28px);
         }
 
         .interval-input {
             width: 80px;
-            padding: 8px 12px;
-            border: none;
+            padding: 10px 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
-            background: rgba(255,255,255,0.9);
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
             text-align: center;
+            font-weight: 400;
+            transition: all 0.3s ease;
+        }
+
+        .interval-input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 2px rgba(0, 212, 255, 0.2);
         }
 
         .loading {
             text-align: center;
-            color: white;
+            color: #ffffff;
             font-size: 1.1rem;
             margin: 40px 0;
         }
@@ -760,8 +839,10 @@
 
         <div class="url-input-section">
             <div class="url-input">
-                <input type="text" id="youtube-url" placeholder="Paste YouTube URL here..." />
-                <button onclick="loadVideo()" disabled>⏳ Loading Player...</button>
+                <input type="text" id="youtube-url" placeholder="Paste YouTube or S3 video URL here..." />
+                <input type="file" id="local-file" accept="video/*" style="display:none" />
+                <button id="load-btn" onclick="loadVideo()">🚀 Load Video</button>
+                <button id="upload-btn" onclick="document.getElementById('local-file').click()">Upload File</button>
             </div>
         </div>
 
@@ -795,6 +876,7 @@
 
         <div class="player-container">
             <div id="youtube-player"></div>
+            <div id="s3-player" style="display:none; width: 100%; height: 500px; border-radius: 15px; overflow: hidden;"></div>
             <button class="floating-cta avatar-cta hidden" id="explain-btn" onclick="triggerManualPopup()" style="background: none; box-shadow: none; padding: 0; border: none; width: 70px; height: 70px;">
                 <img src="avatar_button.png" alt="Explain" style="width: 70px; height: 70px; border-radius: 50%; box-shadow: 0 4px 16px rgba(0,0,0,0.18); border: 3px solid #fff; background: #f8f8ff; object-fit: cover;" />
             </button>
@@ -925,8 +1007,8 @@
         function onPlayerReady(event) {
             console.log('YouTube player ready');
             // Enable the load button
-            document.querySelector('.url-input button').disabled = false;
-            document.querySelector('.url-input button').textContent = '🚀 Load Video';
+            document.getElementById('load-btn').disabled = false;
+            document.getElementById('load-btn').textContent = '🚀 Load Video';
         }
 
         function onPlayerError(event) {
@@ -935,18 +1017,36 @@
         }
 
         function onPlayerStateChange(event) {
+            // Skip YouTube player state changes when using S3 videos
+            if (window.currentVideoType === 's3') {
+                console.log('⏭️ Skipping YouTube player state change for S3 video');
+                return;
+            }
+            
+            console.log('YouTube player state changed:', event.data);
+            
             if (event.data === YT.PlayerState.PLAYING) {
-                // Only start tracking if auto-trigger is enabled and no tracking is currently active
+                console.log('▶️ YouTube video started playing');
                 if (autoTriggerEnabled) {
-                    if (hasChapters && videoChapters.length > 0 && !chapterTimer) {
+                    if (hasChapters && videoChapters.length > 0) {
                         startChapterTracking();
-                        console.log('Player playing - started chapter tracking');
-                    } else if (!hasChapters && !timeTrackingTimer) {
+                    } else {
                         startTimeTracking();
-                        console.log('Player playing - started time-based tracking');
                     }
                 }
             } else if (event.data === YT.PlayerState.PAUSED) {
+                console.log('⏸️ YouTube video paused');
+                // Stop all tracking
+                if (chapterTimer) {
+                    clearInterval(chapterTimer);
+                    chapterTimer = null;
+                }
+                if (timeTrackingTimer) {
+                    clearInterval(timeTrackingTimer);
+                    timeTrackingTimer = null;
+                }
+            } else if (event.data === YT.PlayerState.ENDED) {
+                console.log('⏹️ YouTube video ended');
                 // Stop all tracking
                 if (chapterTimer) {
                     clearInterval(chapterTimer);
@@ -961,215 +1061,135 @@
 
         async function loadVideo() {
             const url = document.getElementById('youtube-url').value;
-            const videoId = extractVideoId(url);
+            console.log('🔍 Attempting to load video with URL:', url);
             
-            if (!videoId) {
-                alert('Please enter a valid YouTube URL');
+            const videoInfo = extractVideoId(url);
+            console.log('📋 Extracted video info:', videoInfo);
+            
+            if (!videoInfo) {
+                alert('Please enter a valid YouTube or S3 video URL');
                 return;
             }
 
-            // Check if player is ready
-            if (!player || !player.loadVideoById) {
-                alert('YouTube player is not ready yet. Please wait a moment and try again.');
-                return;
-            }
-
-            currentVideoId = videoId;
+            currentVideoId = videoInfo.id;
+            console.log('🎯 Current video ID:', currentVideoId);
+            console.log('🎬 Video type:', videoInfo.type);
             
             // Show loading state
             document.getElementById('loading').classList.remove('hidden');
             document.getElementById('explain-btn').classList.add('hidden');
             
             try {
-                // Load the video first
-                player.loadVideoById(videoId);
-                
-                // First, check if video has chapters
-                console.log('Checking for video chapters...');
-                console.log('API URL:', `${apiBaseUrl}/video-chapters/${videoId}`);
-                
-                try {
-                    const chaptersResponse = await fetch(`${apiBaseUrl}/video-chapters/${videoId}`);
-                    console.log('Chapters response status:', chaptersResponse.status);
+                if (videoInfo.type === 'youtube') {
+                    // Ensure containers visibility
+                    const yt = document.getElementById('youtube-player');
+                    const s3c = document.getElementById('s3-player');
+                    if (s3c) s3c.style.display = 'none';
+                    if (yt) yt.style.display = '';
                     
-                    if (!chaptersResponse.ok) {
-                        throw new Error(`HTTP ${chaptersResponse.status}: ${chaptersResponse.statusText}`);
+                    // Check if YouTube player is ready only for YouTube videos
+                    if (!player || !player.loadVideoById) {
+                        alert('YouTube player is not ready yet. Please wait a moment and try again.');
+                        return;
                     }
                     
-                    const chaptersData = await chaptersResponse.json();
-                    console.log('Raw chapters response:', chaptersData);
+                    // Handle YouTube video (existing logic)
+                    console.log('🎬 Loading YouTube video:', videoInfo.id);
                     
-                    if (chaptersData.success) {
-                        hasChapters = chaptersData.has_chapters;
-                        videoChapters = chaptersData.chapters || [];
+                    // Set global video type
+                    window.currentVideoType = 'youtube';
+                    
+                    // Restore YouTube player if it was replaced by S3 player
+                    // We now just ensure the S3 container is hidden
+                    
+                    // Load video into YouTube player
+                    if (player && player.loadVideoById) {
+                        player.loadVideoById(videoInfo.id);
+                        console.log('✅ YouTube video loaded into player');
+                    } else {
+                        console.error('❌ YouTube player not available');
+                        throw new Error('YouTube player not available');
+                    }
+                    
+                    // Process YouTube video through backend API to enable AI features
+                    console.log('🤖 Processing YouTube video for AI features...');
+                    processYouTubeVideoForAI(videoInfo.id);
+                    
+                    // The processYouTubeVideoForAI function now handles all chapter detection and mode setting
+                    // No need for additional setTimeout or chapter checking here
+                    
+                } else if (videoInfo.type === 's3') {
+                    // Ensure containers visibility
+                    const yt = document.getElementById('youtube-player');
+                    const s3c = document.getElementById('s3-player');
+                    if (yt) yt.style.display = 'none';
+                    if (s3c) s3c.style.display = '';
+                    
+                    // Handle S3 video (new logic) - no YouTube player required
+                    console.log('🎬 Loading S3 video:', videoInfo.id);
+                    console.log('🔍 Video info object:', videoInfo);
+                    
+                    // Set global video type to prevent YouTube player errors
+                    window.currentVideoType = 's3';
+                    
+                    try {
+                        // Set up S3 video player using Vime
+                        console.log('⚙️ Setting up S3 Vime player...');
+                        setupS3PlayerWithVime(videoInfo.id);
                         
-                        console.log('Chapter detection result:', {
-                            success: chaptersData.success,
-                            hasChapters: hasChapters,
-                            chaptersCount: videoChapters.length,
-                            chapters: videoChapters,
-                            totalChapters: chaptersData.total_chapters
-                        });
+                        // Process S3 video through backend API to enable AI features
+                        console.log('🤖 Processing S3 video for AI features...');
+                        processS3VideoForAI(videoInfo.id);
                         
-                        // Additional validation
-                        if (videoChapters && Array.isArray(videoChapters) && videoChapters.length > 0) {
-                            console.log('✅ Chapters array is valid and contains data');
-                            console.log('First chapter:', videoChapters[0]);
-                            console.log('Chapter structure:', Object.keys(videoChapters[0]));
-                        } else {
-                            console.log('❌ Chapters array is invalid or empty');
-                            console.log('videoChapters type:', typeof videoChapters);
-                            console.log('videoChapters length:', videoChapters ? videoChapters.length : 'undefined');
-                        }
-                        
-                        if (hasChapters && videoChapters.length > 0) {
-                            console.log(`🎯 Video has ${videoChapters.length} chapters:`, videoChapters);
+                        // Wait a moment for the player to be set up
+                        setTimeout(() => {
+                            console.log('✅ S3 player verification step complete (Vime)');
                             
-                            // CRITICAL: Stop any existing time-based tracking immediately
-                            if (timeTrackingTimer) {
-                                clearInterval(timeTrackingTimer);
-                                timeTrackingTimer = null;
-                                console.log('🛑 Stopped existing time-based tracking');
-                            }
-                            
-                            // Update UI to show chapter-based mode
-                            document.querySelector('.setting-label[for="trigger-interval"]').textContent = 'Chapter-based (auto)';
-                            document.getElementById('trigger-interval').disabled = true;
-                            document.getElementById('trigger-interval').value = 'Chapters';
-                            
-                            // Force hasChapters to true if we have chapters
-                            hasChapters = true;
-                            console.log('✅ Chapter mode activated');
-                        } else {
-                            console.log('⏰ Video has no chapters, using time-based intervals');
-                            
-                            // CRITICAL: Stop any existing chapter-based tracking immediately
-                            if (chapterTimer) {
-                                clearInterval(chapterTimer);
-                                chapterTimer = null;
-                                console.log('🛑 Stopped existing chapter-based tracking');
-                            }
+                            // S3 videos don't have chapters, use time-based intervals
+                                hasChapters = false;
+                                videoChapters = [];
+                            console.log('✅ S3 video - chapters disabled, using time-based intervals');
                             
                             // Update UI to show time-based mode
-                            document.querySelector('.setting-label[for="trigger-interval"]').textContent = 'Interval (seconds)';
-                            document.getElementById('trigger-interval').disabled = false;
-                            document.getElementById('trigger-interval').value = '30';
+                            const triggerLabel = document.querySelector('.setting-label[for="trigger-interval"]');
+                            const triggerInput = document.getElementById('trigger-interval');
                             
-                            // Force hasChapters to false if no chapters
-                            hasChapters = false;
-                            videoChapters = [];
-                            console.log('✅ Time-based mode activated');
-                        }
+                            if (triggerLabel && triggerInput) {
+                                triggerLabel.textContent = 'Interval (seconds)';
+                                triggerInput.disabled = false;
+                                triggerInput.value = triggerInterval.toString();
+                                console.log('✅ UI updated for time-based mode');
+                        } else {
+                                console.warn('⚠️ Could not find trigger interval elements');
+                            }
+                            
+                            // Update header
+                            const header = document.querySelector('.header h1');
+                            if (header) {
+                                header.textContent = `🎓 S3 Video Player`;
+                                console.log('✅ Header updated for S3 video');
                     } else {
-                        console.log('❌ Could not check chapters, defaulting to time-based mode');
-                        console.log('Error from API:', chaptersData.error);
-                        hasChapters = false;
-                        videoChapters = [];
-                    }
-                } catch (chapterError) {
-                    console.error('❌ Error checking chapters:', chapterError);
-                    console.log('Defaulting to time-based mode due to chapter check error');
-                    hasChapters = false;
-                    videoChapters = [];
-                }
-                
-                console.log('Making API request to:', `${apiBaseUrl}/process-video`);
-                console.log('Request payload:', {
-                    youtube_url: url,
-                    auto_trigger: autoTriggerEnabled,
-                    trigger_interval: triggerInterval,
-                    show_avatar: showAvatar,
-                    bgm_enabled: bgmEnabled
-                });
-                
-                // Process video with real API
-                const response = await fetch(`${apiBaseUrl}/process-video`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        youtube_url: url,
-                        auto_trigger: autoTriggerEnabled,
-                        trigger_interval: triggerInterval,
-                        show_avatar: showAvatar,
-                        bgm_enabled: bgmEnabled
-                    })
-                });
-
-                console.log('Response status:', response.status);
-                console.log('Response headers:', response.headers);
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                }
-
-                const result = await response.json();
-                console.log('API response:', result);
-                
-                if (result.success) {
-                    // Initialize video segments with real data
-                    videoSegments = result.segments; // Preserve all fields, including 'words'
+                                console.warn('⚠️ Could not find header element');
+                            }
+                            
+                    // For S3 videos, we'll use time-based tracking only
+                            console.log('⏰ S3 video - starting time-based tracking');
                     
-                    currentSegmentIndex = 0;
-                    lastTriggerTime = 0;
-                    currentChapterIndex = 0;
-                    
-                    // Update UI with video title
-                    document.querySelector('.header h1').textContent = `🎓 ${result.video_title}`;
-                    
-                    console.log(`Processed video: ${result.video_title}`);
-                    console.log(`Found ${videoSegments.length} segments`);
-                    
-                    // Start appropriate tracking based on whether video has chapters
-                    if (hasChapters && videoChapters.length > 0) {
-                        console.log('🎯 Starting chapter-based tracking');
-                        console.log('Chapter data:', videoChapters);
+                    // Start time-based tracking
+                    startTimeTracking();
+                    debugTrackingState();
+                            
+                            console.log('✅ S3 video setup complete');
+                            
+                        }, 500); // Give the player setup time to complete
                         
-                        // Ensure any existing timers are cleared first
-                        if (timeTrackingTimer) {
-                            clearInterval(timeTrackingTimer);
-                            timeTrackingTimer = null;
-                            console.log('🛑 Cleared time tracking timer');
-                        }
-                        if (chapterTimer) {
-                            clearInterval(chapterTimer);
-                            chapterTimer = null;
-                            console.log('🛑 Cleared chapter timer');
-                        }
-                        
-                        // Force the state to be correct
-                        hasChapters = true;
-                        console.log('✅ Chapter mode confirmed - hasChapters:', hasChapters);
-                        
-                        startChapterTracking();
-                        debugTrackingState(); // Debug the state
-                    } else {
-                        console.log('⏰ Starting time-based tracking');
-                        console.log('No chapters detected - hasChapters:', hasChapters, 'chaptersCount:', videoChapters.length);
-                        
-                        // Ensure any existing timers are cleared first
-                        if (chapterTimer) {
-                            clearInterval(chapterTimer);
-                            chapterTimer = null;
-                            console.log('🛑 Cleared chapter timer');
-                        }
-                        if (timeTrackingTimer) {
-                            clearInterval(timeTrackingTimer);
-                            timeTrackingTimer = null;
-                            console.log('🛑 Cleared time tracking timer');
-                        }
-                        
-                        // Force the state to be correct
-                        hasChapters = false;
-                        videoChapters = [];
-                        console.log('✅ Time-based mode confirmed - hasChapters:', hasChapters);
-                        
-                        startTimeTracking();
-                        debugTrackingState(); // Debug the state
+                    } catch (s3Error) {
+                        console.error('❌ Error setting up S3 video:', s3Error);
+                        throw new Error(`S3 video setup failed: ${s3Error.message}`);
                     }
                 } else {
-                    throw new Error(result.error || 'Failed to process video');
+                    console.error('❌ Unknown video type:', videoInfo.type);
+                    throw new Error(`Unknown video type: ${videoInfo.type}`);
                 }
                 
             } catch (error) {
@@ -1229,13 +1249,24 @@
         }
 
         function extractVideoId(url) {
-            const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
-            const match = url.match(regex);
-            return match ? match[1] : null;
+            // Prefer S3/local detection FIRST
+            const s3HostPattern = /https?:\/\/([^.]+\.)?s3[.-][a-z0-9-]+\.amazonaws\.com\//i;
+            const s3VirtualHostPattern = /https?:\/\/[^\/]+\.s3\.amazonaws\.com\//i;
+            const hasVideoExt = /\.(mp4|webm|mov|m4v|avi|mkv)(?:\?|#|$)/i;
+            if (s3HostPattern.test(url) || s3VirtualHostPattern.test(url) || hasVideoExt.test(url) || url.startsWith('blob:')) {
+                return { type: 's3', id: url };
+            }
+            // Then YouTube
+            const youtubeRegex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+            const youtubeMatch = url.match(youtubeRegex);
+            if (youtubeMatch) {
+                return { type: 'youtube', id: youtubeMatch[1] };
+            }
+            return null;
         }
 
         function startTimeTracking() {
-            if (autoTriggerEnabled && !hasChapters && videoChapters.length === 0) {
+            if (autoTriggerEnabled && !hasChapters) {
                 // Clear any existing timers first
                 if (chapterTimer) {
                     clearInterval(chapterTimer);
@@ -1331,15 +1362,32 @@
 
         function checkAutoTrigger() {
             // Multiple safety checks to ensure this never runs with chapters
-            if (!autoTriggerEnabled || isProcessing || hasChapters || videoChapters.length > 0) {
+            if (!autoTriggerEnabled || isProcessing || hasChapters) {
+                console.log('🚫 Auto trigger blocked:', {
+                    autoTriggerEnabled,
+                    isProcessing,
+                    hasChapters,
+                    currentTime: window.currentVideoType === 's3' ? 
+                        (document.querySelector('#s3-player vm-player')?.currentTime || 0) : 
+                        (player.getCurrentTime ? player.getCurrentTime() : 0)
+                });
                 return;
             }
             
-            const currentTime = player.getCurrentTime();
+            // Get current time based on video type
+            let currentTime = 0;
+            if (window.currentVideoType === 's3') {
+                const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                if (s3Player) {
+                    currentTime = s3Player.currentTime || 0;
+                }
+            } else {
+                currentTime = player.getCurrentTime();
+            }
             const timeSinceLastTrigger = currentTime - lastTriggerTime;
             
             if (timeSinceLastTrigger >= triggerInterval) {
-                console.log(`Time-based trigger: ${timeSinceLastTrigger}s elapsed, triggering popup`);
+                console.log(`⏰ Time-based trigger: ${timeSinceLastTrigger}s elapsed, triggering popup at ${currentTime}s`);
                 triggerPopup();
                 lastTriggerTime = currentTime;
             }
@@ -1370,14 +1418,58 @@
            if (avatarSection) avatarSection.classList.remove('talking');
            setupAINarrationButton();
             
-            const currentTime = player.getCurrentTime();
+            // Get current time based on video type
+            let currentTime = 0;
+            if (window.currentVideoType === 's3') {
+                const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                if (s3Player) {
+                    currentTime = s3Player.currentTime || 0;
+                }
+            } else {
+                currentTime = player.getCurrentTime();
+            }
             
             // Find current segment
             const currentSegment = findCurrentSegment(currentTime);
             
+            // Check if there's enough content (at least 10 seconds)
+            if (currentTime < 10) {
+                // Show "not enough content" message
+                document.getElementById('learning-popup').classList.add('active');
+                document.getElementById('summary-text').textContent = 'There is not enough content yet to explain. Please continue watching.';
+                
+                // Pause video based on video type
+                if (window.currentVideoType === 's3') {
+                    const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                    if (s3Player) {
+                        s3Player.pause();
+                    }
+                } else {
+                    player.pauseVideo();
+                }
+                
+                // Show avatar if enabled
+                showAvatarInPopup();
+                
+                // Play background music if enabled
+                if (bgmEnabled) {
+                    playBackgroundMusic();
+                }
+                
+                isProcessing = false;
+                return;
+            }
+            
             if (currentSegment) {
-                // Pause video
-                player.pauseVideo();
+                // Pause video based on video type
+                if (window.currentVideoType === 's3') {
+                    const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                    if (s3Player) {
+                        s3Player.pause();
+                    }
+                } else {
+                    player.pauseVideo();
+                }
                 
                 // Show popup with loading state
                 document.getElementById('summary-text').textContent = 'Generating time-specific explanation...';
@@ -1440,8 +1532,15 @@
             if (isProcessing) return;
             isProcessing = true;
             
-            // Pause video
-            player.pauseVideo();
+            // Pause video based on video type
+            if (window.currentVideoType === 's3') {
+                const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                if (s3Player) {
+                    s3Player.pause();
+                }
+            } else {
+                player.pauseVideo();
+            }
             
             // Show popup
             document.getElementById('learning-popup').classList.add('active');
@@ -1524,11 +1623,39 @@
             isNarrationPlaying = false;
             const avatarSection = document.getElementById('avatar-section');
             if (avatarSection) avatarSection.classList.remove('talking');
-            player.playVideo();
+            
+            // Resume video based on video type
+            if (window.currentVideoType === 's3') {
+                const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                if (s3Player) {
+                    s3Player.play();
+                    console.log('✅ S3 video resumed');
+                }
+            } else {
+                // YouTube video
+                if (player && player.playVideo) {
+                    player.playVideo();
+                    console.log('✅ YouTube video resumed');
+                }
+            }
         }
 
         async function replaySummary() {
-            const currentTime = player.getCurrentTime();
+            let currentTime = 0;
+            
+            // Get current time based on video type
+            if (window.currentVideoType === 's3') {
+                const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                if (s3Player) {
+                    currentTime = s3Player.currentTime;
+                }
+            } else {
+                // YouTube video
+                if (player && player.getCurrentTime) {
+                    currentTime = player.getCurrentTime();
+                }
+            }
+            
             const currentSegment = findCurrentSegment(currentTime);
             
             if (currentSegment) {
@@ -1549,13 +1676,15 @@
 
                     const result = await response.json();
                     
-                    if (result.success) {
-                        // Update the popup with time-specific explanation
+                    if (result.success && result.learning_point && result.learning_point.summary) {
                         document.getElementById('summary-text').textContent = result.learning_point.summary;
-                        console.log('Updated with time-specific explanation:', result.learning_point.summary);
+                        console.log('Replayed summary:', result.learning_point.summary);
+                    } else {
+                        document.getElementById('summary-text').textContent = currentSegment.summary;
                     }
                 } catch (error) {
                     console.error('Error replaying summary:', error);
+                    document.getElementById('summary-text').textContent = currentSegment.summary;
                 }
             }
         }
@@ -1715,14 +1844,22 @@
             console.log('currentChapterIndex:', currentChapterIndex);
             console.log('chapterTimer:', chapterTimer);
             console.log('timeTrackingTimer:', timeTrackingTimer);
-            console.log('currentTime:', player ? player.getCurrentTime() : 'N/A');
             
-            if (videoChapters.length > 0) {
-                console.log('Chapter details:');
-                videoChapters.forEach((chapter, index) => {
-                    console.log(`  Chapter ${index}: ${chapter.title} (${chapter.start_time}s - ${chapter.end_time}s)`);
-                });
+            // Get current time based on video type
+            let currentTime = 0;
+            if (window.currentVideoType === 's3') {
+                const s3Player = document.querySelector('#s3-player vm-player') || document.querySelector('vm-player');
+                if (s3Player) {
+                    currentTime = s3Player.currentTime || 0;
+                }
+            } else {
+                currentTime = player.getCurrentTime();
             }
+            
+            console.log('currentTime:', currentTime);
+            console.log('lastTriggerTime:', lastTriggerTime);
+            console.log('triggerInterval:', triggerInterval);
+            console.log('timeSinceLastTrigger:', currentTime - lastTriggerTime);
             console.log('==========================');
         }
 
@@ -1895,8 +2032,8 @@
             setTimeout(function() {
                 if (!player || !player.loadVideoById) {
                     console.warn('YouTube API not loaded, enabling fallback');
-                    document.querySelector('.url-input button').disabled = false;
-                    document.querySelector('.url-input button').textContent = '🚀 Load Video (Fallback)';
+                    document.getElementById('load-btn').disabled = false;
+                    document.getElementById('load-btn').textContent = '🚀 Load Video (Fallback)';
                 }
             }, 10000);
 
@@ -1947,6 +2084,697 @@
                 });
             }
         });
+
+        function setupS3Player(s3Url) {
+            console.log('🎬 Setting up S3 video player with URL:', s3Url);
+            
+            try {
+                // Use backend proxy to avoid CORS/Range issues
+                const proxiedUrl = `${apiBaseUrl}/s3-playable?url=${encodeURIComponent(s3Url)}`;
+                
+                // Find the YouTube player container
+            const playerContainer = document.getElementById('youtube-player');
+                if (!playerContainer) {
+                    console.error('❌ YouTube player container not found');
+                    return;
+                }
+            
+                console.log('✅ Found player container, clearing content...');
+                
+                // Clear the container completely
+            playerContainer.innerHTML = '';
+            
+            // Add S3 mode class to container
+            playerContainer.classList.add('s3-mode');
+            
+                // Create the video element
+            const videoElement = document.createElement('video');
+            videoElement.id = 's3-video-player';
+            videoElement.controls = true;
+                videoElement.playsInline = true;
+                videoElement.preload = 'metadata';
+                videoElement.crossOrigin = 'anonymous';
+                videoElement.style.width = 'auto';
+                videoElement.style.height = 'auto';
+                videoElement.style.maxWidth = '100%';
+                videoElement.style.maxHeight = '100%';
+                videoElement.style.borderRadius = '12px';
+                videoElement.style.backgroundColor = '#000';
+                videoElement.style.objectFit = 'contain';
+                videoElement.style.display = 'block';
+                videoElement.style.margin = '0 auto';
+                
+                // Create source element
+            const sourceElement = document.createElement('source');
+                sourceElement.src = proxiedUrl;
+            sourceElement.type = 'video/mp4';
+            
+                // Add fallback text
+                const fallbackText = document.createTextNode('Your browser does not support the video tag.');
+                
+                // Assemble the video element
+            videoElement.appendChild(sourceElement);
+                videoElement.appendChild(fallbackText);
+            
+                // Add the video to the container
+            playerContainer.appendChild(videoElement);
+            
+                console.log('✅ Video element created and added to container');
+                
+                // Wait for the video element to be in the DOM, then add event listeners
+                const checkAndSetup = () => {
+                    const s3Player = document.getElementById('s3-video-player');
+                    if (s3Player) {
+                        console.log('✅ S3 video player element found, adding event listeners...');
+            
+            // Add event listeners for S3 player
+                        try {
+                            s3Player.addEventListener('loadedmetadata', () => {
+                                console.log('✅ S3 video metadata loaded', { duration: s3Player.duration });
+                                
+                                // Calculate container size based on video dimensions
+                                const videoWidth = s3Player.videoWidth;
+                                const videoHeight = s3Player.videoHeight;
+                                const containerWidth = playerContainer.offsetWidth;
+                                
+                                // Calculate the height that maintains aspect ratio
+                                const aspectRatio = videoHeight / videoWidth;
+                                const calculatedHeight = containerWidth * aspectRatio;
+                                
+                                // Set container height to fit video perfectly
+                                playerContainer.style.height = `${calculatedHeight}px`;
+                                playerContainer.style.overflow = 'visible';
+                                playerContainer.style.maxHeight = 'none';
+                                
+                                // Ensure video fits properly
+                                s3Player.style.height = `${calculatedHeight}px`;
+                                s3Player.style.maxHeight = 'none';
+                                
+                                console.log('📐 Video dimensions:', { videoWidth, videoHeight, aspectRatio, calculatedHeight });
+                            });
+                            s3Player.addEventListener('error', (e) => {
+                                console.error('❌ S3 video error:', e, s3Player.error);
+                            });
+                            s3Player.addEventListener('timeupdate', handleS3TimeUpdate);
+                            s3Player.addEventListener('play', handleS3Play);
+                            s3Player.addEventListener('pause', handleS3Pause);
+                            s3Player.addEventListener('ended', handleS3Ended);
+                            
+                            console.log('✅ S3 video player setup complete - all event listeners added');
+                            
+                            // Explicitly call load to fetch metadata via proxy
+                            s3Player.load();
+                            console.log('✅ Video load() called');
+                            
+                        } catch (listenerError) {
+                            console.error('❌ Error adding event listeners:', listenerError);
+                        }
+                    } else {
+                        console.log('⏳ Waiting for S3 player element...');
+                        setTimeout(checkAndSetup, 50);
+                    }
+                };
+                
+                // Start checking for the element
+                checkAndSetup();
+                
+                // Add a safety fallback: if playable endpoint fails, swap to proxy
+                setTimeout(() => {
+                    const s3Player = document.getElementById('s3-video-player');
+                    if (!s3Player) return;
+                    
+                    const tryFallback = () => {
+                        const currentSrc = s3Player.currentSrc || (s3Player.querySelector('source')?.src || '');
+                        if (currentSrc.includes('/s3-playable')) {
+                            console.warn('⚠️ Falling back to s3-proxy due to playable load error/timeout');
+                            const proxyUrl = `${apiBaseUrl}/s3-proxy?url=${encodeURIComponent(s3Url)}`;
+                            const sourceEl = s3Player.querySelector('source');
+                            if (sourceEl) sourceEl.src = proxyUrl;
+                            else s3Player.src = proxyUrl;
+                            s3Player.load();
+                        }
+                    };
+                    
+                    // If no metadata within 3s, fallback
+                    let metaLoaded = false;
+                    s3Player.addEventListener('loadedmetadata', () => { metaLoaded = true; }, { once: true });
+                    setTimeout(() => { if (!metaLoaded) tryFallback(); }, 3000);
+                    
+                    // If error fires, fallback
+                    s3Player.addEventListener('error', tryFallback);
+                }, 100);
+                
+            } catch (error) {
+                console.error('❌ Error in setupS3Player:', error);
+            }
+        }
+        
+        function restoreYouTubePlayer() {
+            console.log('🔄 Restoring YouTube player');
+            
+            try {
+                // Restore original YouTube player methods if they were overridden
+                if (window.player && window.player._s3Mode) {
+                    console.log('🔄 Restoring original YouTube player methods...');
+                    window.player.getCurrentTime = window.player._originalGetCurrentTime;
+                    window.player.getPlayerState = window.player._originalGetPlayerState;
+                    window.player.getDuration = window.player._originalGetDuration;
+                    delete window.player._s3Mode;
+                    delete window.player._originalGetCurrentTime;
+                    delete window.player._originalGetPlayerState;
+                    delete window.player._originalGetDuration;
+                    console.log('✅ Original YouTube player methods restored');
+                }
+                
+                // Find the player container
+            const playerContainer = document.getElementById('youtube-player');
+                if (!playerContainer) {
+                    console.error('❌ Player container not found for restoration');
+                    return;
+                }
+                
+                // Clear any existing content (including S3 player)
+                playerContainer.innerHTML = '';
+                
+                // Create a new div for YouTube player
+                const youtubeDiv = document.createElement('div');
+                youtubeDiv.id = 'youtube-player';
+                youtubeDiv.style.width = '100%';
+                youtubeDiv.style.height = '100%';
+                
+                // Add it to the container
+                playerContainer.appendChild(youtubeDiv);
+                
+                console.log('✅ YouTube player container restored');
+                
+                // Reinitialize YouTube player if YT API is available
+            if (window.YT && window.YT.Player) {
+                    console.log('🔄 Reinitializing YouTube player...');
+                player = new YT.Player('youtube-player', {
+                    height: '100%',
+                    width: '100%',
+                    videoId: '',
+                    playerVars: {
+                        'playsinline': 1,
+                        'controls': 1,
+                        'rel': 0,
+                        'modestbranding': 1
+                    },
+                    events: {
+                        'onReady': onPlayerReady,
+                        'onStateChange': onPlayerStateChange
+                    }
+                });
+                    console.log('✅ YouTube player reinitialized');
+                } else {
+                    console.warn('⚠️ YouTube API not available for reinitialization');
+                }
+                
+            } catch (error) {
+                console.error('❌ Error restoring YouTube player:', error);
+            }
+        }
+        
+        function handleS3TimeUpdate() {
+            try {
+            const s3Player = document.getElementById('s3-video-player');
+                if (!s3Player) {
+                    console.warn('⚠️ S3 player not found in timeupdate handler');
+                    return;
+                }
+            
+            const currentTime = s3Player.currentTime;
+            
+            // Update current time for tracking functions
+            if (window.player) {
+                // Temporarily override player.getCurrentTime for S3 videos
+                window.player.getCurrentTime = () => currentTime;
+                    
+                    // Also override other player methods to prevent errors
+                    if (!window.player._s3Mode) {
+                        window.player._s3Mode = true;
+                        window.player._originalGetCurrentTime = window.player.getCurrentTime;
+                        window.player._originalGetPlayerState = window.player.getPlayerState;
+                        window.player._originalGetDuration = window.player.getDuration;
+                        
+                        // Override methods to work with S3 videos
+                        window.player.getCurrentTime = () => currentTime;
+                        window.player.getPlayerState = () => {
+                            const s3Player = document.getElementById('s3-video-player');
+                            if (s3Player) {
+                                if (s3Player.paused) return 2; // Paused
+                                if (s3Player.ended) return 0; // Ended
+                                return 1; // Playing
+                            }
+                            return -1; // Unknown
+                        };
+                        window.player.getDuration = () => {
+                            const s3Player = document.getElementById('s3-video-player');
+                            return s3Player ? s3Player.duration : 0;
+                        };
+                        
+                        console.log('✅ YouTube player methods overridden for S3 compatibility');
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error in handleS3TimeUpdate:', error);
+            }
+        }
+        
+        function handleS3Play() {
+            try {
+            console.log('▶️ S3 video started playing');
+            if (autoTriggerEnabled) {
+                if (hasChapters && videoChapters.length > 0) {
+                    startChapterTracking();
+                } else {
+                    startTimeTracking();
+                }
+                }
+            } catch (error) {
+                console.error('❌ Error in handleS3Play:', error);
+            }
+        }
+        
+        function handleS3Pause() {
+            try {
+            console.log('⏸️ S3 video paused');
+            // Stop all tracking
+            if (chapterTimer) {
+                clearInterval(chapterTimer);
+                chapterTimer = null;
+            }
+            if (timeTrackingTimer) {
+                clearInterval(timeTrackingTimer);
+                timeTrackingTimer = null;
+                }
+            } catch (error) {
+                console.error('❌ Error in handleS3Pause:', error);
+            }
+        }
+        
+        function handleS3Ended() {
+            try {
+            console.log('⏹️ S3 video ended');
+            // Stop all tracking
+            if (chapterTimer) {
+                clearInterval(chapterTimer);
+                chapterTimer = null;
+            }
+            if (timeTrackingTimer) {
+                clearInterval(timeTrackingTimer);
+                timeTrackingTimer = null;
+            }
+            } catch (error) {
+                console.error('❌ Error in handleS3Ended:', error);
+            }
+        }
+
+        async function processS3VideoForAI(s3Url) {
+            // Process S3 video through backend API to enable AI features
+            try {
+                console.log('🚀 Processing S3 video for AI features:', s3Url);
+                
+                // Show loading state
+                document.getElementById('summary-text').textContent = 'Processing S3 video for AI features...';
+                
+                // Call the backend API to process the S3 video
+                const response = await fetch(`${apiBaseUrl}/process-video`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        video_url: s3Url,  // Use video_url field for S3
+                        auto_trigger: autoTriggerEnabled,
+                        trigger_interval: triggerInterval,
+                        show_avatar: showAvatar,
+                        bgm_enabled: bgmEnabled
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('S3 video processing result:', result);
+                
+                if (result.success) {
+                    // Initialize video segments with real data from S3 video
+                    videoSegments = result.segments || [];
+                    currentSegmentIndex = 0;
+                    lastTriggerTime = 0;
+                    
+                    console.log(`✅ S3 video processed successfully!`);
+                    console.log(`📹 Video title: ${result.video_title}`);
+                    console.log(`📝 Found ${videoSegments.length} segments`);
+                    console.log(`⏱️ Total duration: ${result.total_duration}s`);
+                    
+                    // Update UI with video title
+                    const header = document.querySelector('.header h1');
+                    if (header) {
+                        header.textContent = `🎓 ${result.video_title}`;
+                    }
+                    
+                    // Enable AI features
+                    console.log('🤖 Enabling AI features for S3 video...');
+                    
+                    // Show success message
+                    document.getElementById('summary-text').textContent = `✅ S3 video processed! AI features enabled. Video will pause every ${triggerInterval} seconds for learning points.`;
+                    
+                    // Start time-based tracking for AI pop-ups
+                    if (autoTriggerEnabled) {
+                        console.log('⏰ Starting AI time-based tracking for S3 video');
+                        startTimeTracking();
+                    }
+                    
+                    console.log('🎉 S3 video AI features fully enabled!');
+                    
+                } else {
+                    console.error('❌ S3 video processing failed:', result.error);
+                    document.getElementById('summary-text').textContent = `❌ Error processing S3 video: ${result.error}`;
+                    
+                    // Fallback: create dummy segments for basic functionality
+                    createDummySegmentsForS3();
+                }
+                
+            } catch (error) {
+                console.error('❌ Error processing S3 video for AI:', error);
+                document.getElementById('summary-text').textContent = `❌ Error: ${error.message}`;
+                
+                // Fallback: create dummy segments for basic functionality
+                createDummySegmentsForS3();
+            }
+        }
+        
+        function createDummySegmentsForS3() {
+            // Create fallback dummy segments for S3 video if processing fails
+            console.log('🔄 Creating fallback dummy segments for S3 video');
+            
+            // Create dummy segments based on video duration (estimate)
+            const estimatedDuration = 120; // 2 minutes default
+            const segmentDuration = 30; // 30 seconds per segment
+            
+            videoSegments = [];
+            for (let i = 0; i < Math.ceil(estimatedDuration / segmentDuration); i++) {
+                const start = i * segmentDuration;
+                const end = Math.min((i + 1) * segmentDuration, estimatedDuration);
+                
+                videoSegments.push({
+                    start: start,
+                    end: end,
+                    transcript: `S3 video segment ${i + 1} (${start}s - ${end}s)`,
+                    summary: `This is segment ${i + 1} of the S3 video. Continue watching to learn more.`
+                });
+            }
+            
+            currentSegmentIndex = 0;
+            lastTriggerTime = 0;
+            
+            console.log(`✅ Created ${videoSegments.length} fallback segments for S3 video`);
+            document.getElementById('summary-text').textContent = `⚠️ Using fallback mode. AI features limited.`;
+        }
+
+        async function processYouTubeVideoForAI(videoId) {
+            // Process YouTube video through backend API to enable AI features
+            try {
+                console.log('🚀 Processing YouTube video for AI features:', videoId);
+                
+                // Show loading state
+                document.getElementById('summary-text').textContent = 'Processing YouTube video for AI features...';
+                
+                // First, check if video has chapters
+                console.log('🔍 Checking for video chapters...');
+                let hasChaptersFromAPI = false;
+                let chaptersFromAPI = [];
+                
+                try {
+                    const chaptersResponse = await fetch(`${apiBaseUrl}/video-chapters/${videoId}`);
+                    if (chaptersResponse.ok) {
+                        const chaptersData = await chaptersResponse.json();
+                        console.log('Chapters API response:', chaptersData);
+                        
+                        if (chaptersData.success && chaptersData.has_chapters) {
+                            hasChaptersFromAPI = true;
+                            chaptersFromAPI = chaptersData.chapters || [];
+                            console.log('✅ Video has chapters from API:', chaptersFromAPI.length);
+                        } else {
+                            console.log('⏰ Video has no chapters, will use time-based mode');
+                        }
+                    }
+                } catch (chapterError) {
+                    console.warn('⚠️ Could not check chapters, will use time-based mode:', chapterError);
+                }
+                
+                // Call the backend API to process the YouTube video
+                const response = await fetch(`${apiBaseUrl}/process-video`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        video_url: `https://www.youtube.com/watch?v=${videoId}`,  // Convert ID back to URL
+                        auto_trigger: autoTriggerEnabled,
+                        trigger_interval: triggerInterval,
+                        show_avatar: showAvatar,
+                        bgm_enabled: bgmEnabled
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const result = await response.json();
+                console.log('YouTube video processing result:', result);
+                
+                if (result.success) {
+                    // Initialize video segments with real data from YouTube video
+                    videoSegments = result.segments || [];
+                    currentSegmentIndex = 0;
+                    lastTriggerTime = 0;
+                    
+                    console.log(`✅ YouTube video processed successfully!`);
+                    console.log(`📹 Video title: ${result.video_title}`);
+                    console.log(`📝 Found ${videoSegments.length} segments`);
+                    console.log(`⏱️ Total duration: ${result.total_duration}s`);
+                    
+                    // Update UI with video title
+                    const header = document.querySelector('.header h1');
+                    if (header) {
+                        header.textContent = `🎓 ${result.video_title}`;
+                    }
+                    
+                    // Enable AI features
+                    console.log('🤖 Enabling AI features for YouTube video...');
+                    
+                    // Show success message
+                    document.getElementById('summary-text').textContent = `✅ YouTube video processed! AI features enabled. Video will pause every ${triggerInterval} seconds for learning points.`;
+                    
+                    // Start time-based tracking for AI pop-ups
+                    if (autoTriggerEnabled) {
+                        console.log('⏰ Starting AI time-based tracking for YouTube video');
+                        startTimeTracking();
+                    }
+                    
+                    console.log('🎉 YouTube video AI features fully enabled!');
+                    
+                } else {
+                    console.error('❌ YouTube video processing failed:', result.error);
+                    document.getElementById('summary-text').textContent = `❌ Error processing YouTube video: ${result.error}`;
+                    
+                    // Fallback: create dummy segments for basic functionality
+                    createDummySegmentsForYouTube();
+                }
+                
+            } catch (error) {
+                console.error('❌ Error processing YouTube video for AI:', error);
+                document.getElementById('summary-text').textContent = `❌ Error: ${error.message}`;
+                
+                // Fallback: create dummy segments for basic functionality
+                createDummySegmentsForYouTube();
+            }
+        }
+        
+        function createDummySegmentsForYouTube() {
+            // Create fallback dummy segments for YouTube video if processing fails
+            console.log('🔄 Creating fallback dummy segments for YouTube video');
+            
+            // Create dummy segments based on video duration (estimate)
+            const estimatedDuration = 120; // 2 minutes default
+            const segmentDuration = 30; // 30 seconds per segment
+            
+            videoSegments = [];
+            for (let i = 0; i < Math.ceil(estimatedDuration / segmentDuration); i++) {
+                const start = i * segmentDuration;
+                const end = Math.min((i + 1) * segmentDuration, estimatedDuration);
+                
+                videoSegments.push({
+                    start: start,
+                    end: end,
+                    transcript: `YouTube video segment ${i + 1} (${start}s - ${end}s)`,
+                    summary: `This is segment ${i + 1} of the YouTube video. Continue watching to learn more.`
+                });
+            }
+            
+            currentSegmentIndex = 0;
+            lastTriggerTime = 0;
+            
+            console.log(`✅ Created ${videoSegments.length} fallback segments for YouTube video`);
+            document.getElementById('summary-text').textContent = `⚠️ Using fallback mode. AI features limited.`;
+        }
+
+        // ---- Vime S3 player setup ----
+        function setupS3PlayerWithVime(s3Url) {
+            const ytContainer = document.getElementById('youtube-player');
+            const s3Container = document.getElementById('s3-player') || ytContainer;
+            if (!ytContainer) return;
+
+            // Tear down YouTube iframe to avoid conflicts
+            try {
+                if (window.player && typeof window.player.stopVideo === 'function') window.player.stopVideo();
+                if (window.player && typeof window.player.destroy === 'function') window.player.destroy();
+            } catch (e) {}
+
+            window.currentVideoType = 's3';
+            if (!window.player) window.player = {};
+            window.player.getCurrentTime = () => 0;
+            window.player.getDuration = () => 0;
+            window.player.getPlayerState = () => -1;
+
+            // Show S3 container, hide YT
+            if (s3Container && s3Container.id === 's3-player') {
+                ytContainer.style.display = 'none';
+                s3Container.style.display = '';
+                s3Container.innerHTML = '';
+            } else {
+                ytContainer.innerHTML = '';
+            }
+
+            const playable = `${apiBaseUrl}/s3-playable?url=${encodeURIComponent(s3Url)}`;
+            const proxy = `${apiBaseUrl}/s3-proxy?url=${encodeURIComponent(s3Url)}`;
+
+            const mountTarget = (s3Container && s3Container.id === 's3-player' ? s3Container : ytContainer);
+
+            const renderVime = () => {
+                // Build Vime tree (vm-* custom elements)
+                const vPlayer = document.createElement('vm-player');
+                vPlayer.setAttribute('controls', '');
+                vPlayer.setAttribute('playsinline', '');
+                vPlayer.setAttribute('preload', 'metadata');
+                vPlayer.setAttribute('cross-origin', 'anonymous');
+                vPlayer.style.width = '100%';
+                vPlayer.style.height = '100%';
+                vPlayer.style.minHeight = '480px';
+                vPlayer.style.borderRadius = '12px';
+                vPlayer.style.background = '#000';
+                vPlayer.style.display = 'block';
+
+                const vVideo = document.createElement('vm-video');
+                vVideo.setAttribute('cross-origin', 'anonymous');
+                vVideo.style.width = '100%';
+                vVideo.style.height = '100%';
+                
+                const source = document.createElement('source');
+                source.src = playable;
+                source.type = 'video/mp4';
+                vVideo.appendChild(source);
+
+                const ui = document.createElement('vm-ui');
+                const ctrls = document.createElement('vm-controls');
+                ctrls.appendChild(document.createElement('vm-playback-control'));
+                ctrls.appendChild(document.createElement('vm-volume-control'));
+                ctrls.appendChild(document.createElement('vm-time-progress'));
+                ctrls.appendChild(document.createElement('vm-fullscreen-control'));
+                ui.appendChild(ctrls);
+
+                vPlayer.appendChild(vVideo);
+                vPlayer.appendChild(ui);
+
+                mountTarget.appendChild(vPlayer);
+
+                // Wait for player to be ready
+                setTimeout(() => {
+                    // Set up event listeners
+                    vPlayer.addEventListener('timeupdate', () => {
+                        const t = vPlayer.currentTime || 0;
+                        window.player.getCurrentTime = () => t;
+                    });
+                    
+                    vPlayer.addEventListener('play', () => {
+                        handleS3Play();
+                        // Ensure audio is enabled
+                        if (vPlayer.muted) {
+                            vPlayer.muted = false;
+                        }
+                        console.log('🎵 S3 video playing, audio should be enabled');
+                    });
+                    
+                    vPlayer.addEventListener('pause', handleS3Pause);
+                    vPlayer.addEventListener('ended', handleS3Ended);
+                    
+                    vPlayer.addEventListener('loadedmetadata', () => {
+                        window.player.getDuration = () => vPlayer.duration || 0;
+                        window.player.getPlayerState = () => {
+                            if (vPlayer.ended) return 0;
+                            if (vPlayer.paused) return 2;
+                            return 1;
+                        };
+                        
+                        // Ensure audio is enabled
+                        vPlayer.muted = false;
+                        vPlayer.volume = 1.0;
+                        
+                        console.log('🎬 S3 video metadata loaded, duration:', vPlayer.duration);
+                        console.log('🔊 Audio settings - muted:', vPlayer.muted, 'volume:', vPlayer.volume);
+                        
+                        // Try to start playback
+                        vPlayer.play().catch(e => {
+                            console.log('⏸️ Autoplay blocked, user needs to click to start');
+                        });
+                    });
+                    
+                    vPlayer.addEventListener('error', (e) => {
+                        console.log('❌ Vime player error, trying proxy fallback:', e);
+                        const srcEl = vPlayer.querySelector('source');
+                        if (srcEl && srcEl.src.includes('/s3-playable')) {
+                            srcEl.src = proxy;
+                            vPlayer.load();
+                        }
+                    });
+
+                    window.getS3CurrentTime = () => vPlayer.currentTime || 0;
+                    
+                    // Add a test function to manually enable audio
+                    window.testS3Audio = () => {
+                        if (vPlayer) {
+                            vPlayer.muted = false;
+                            vPlayer.volume = 1.0;
+                            console.log('🔊 Manual audio test - muted:', vPlayer.muted, 'volume:', vPlayer.volume);
+                            return true;
+                        }
+                        return false;
+                    };
+                    
+                }, 100);
+            };
+
+            // Wait until custom elements are defined before rendering
+            const ensureDefined = async () => {
+                try {
+                    if (customElements && customElements.whenDefined) {
+                        await customElements.whenDefined('vm-player');
+                        await customElements.whenDefined('vm-video');
+                        await customElements.whenDefined('vm-ui');
+                        await customElements.whenDefined('vm-controls');
+                    }
+                } catch (_) {}
+                renderVime();
+            };
+
+            ensureDefined();
+        }
     </script>
 </body>
 </html> 
